@@ -87,6 +87,14 @@ npm run dev
 
 Visit `http://localhost:5173` to see the application.
 
+### Debugging Supabase Connection
+
+When running the app in development mode, the browser console logs whether your
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` variables were detected. If
+they are missing, the application falls back to demo data. Check the console to
+confirm that your credentials are loaded and the Supabase client initializes
+properly.
+
 ## 🗄️ Database Schema
 
 The system uses a comprehensive PostgreSQL schema with:

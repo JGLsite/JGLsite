@@ -4,7 +4,20 @@ import { Database } from '../types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+if (import.meta.env.DEV) {
+  console.log('[supabase] VITE_SUPABASE_URL:', supabaseUrl || '<missing>');
+  console.log('[supabase] VITE_SUPABASE_ANON_KEY present:', !!supabaseAnonKey);
+}
+
 export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey;
+
+if (import.meta.env.DEV) {
+  if (isSupabaseConfigured) {
+    console.log('[supabase] Client initialized with provided credentials');
+  } else {
+    console.warn('[supabase] Missing credentials, using demo client');
+  }
+}
 
 export const supabase: SupabaseClient<Database> = isSupabaseConfigured
   ? createClient<Database>(supabaseUrl, supabaseAnonKey)

@@ -31,6 +31,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+if (import.meta.env.DEV) {
+  console.log('[auth] Supabase configured:', isSupabaseConfigured);
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
