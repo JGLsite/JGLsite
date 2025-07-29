@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Users, DollarSign, Plus, Edit, Eye, Trash2 } from 'lucide-react';
-import { useEvents } from '../../hooks/useSupabaseData';
+import { useEvents, EventWithRelations } from '../../hooks/useSupabaseData';
 import { isSupabaseConfigured, createEvent } from '../../lib/supabase';
 import type { Database } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,7 +15,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
   onCreateFormClose,
 }) => {
   const { user } = useAuth();
-  const { events, loading, error, refetch } = useEvents();
+  const { events, loading, error, refetch, addEvent } = useEvents();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -88,6 +88,21 @@ export const EventManagement: React.FC<EventManagementProps> = ({
         return;
       }
       await refetch();
+    } else {
+      addEvent({
+        ...newEvent,
+        id: `demo-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        host_gym: {
+          name: user?.gym?.name || 'Demo Gym',
+          city: user?.gym?.city || 'Demo City',
+        },
+        creator: {
+          first_name: user?.first_name || 'Demo',
+          last_name: user?.last_name || 'User',
+        },
+      } as EventWithRelations);
     }
 
     setFormData({

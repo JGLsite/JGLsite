@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import type { Database } from '../types/database';
 
-type EventWithRelations = Database['public']['Tables']['events']['Row'] & {
+export type EventWithRelations = Database['public']['Tables']['events']['Row'] & {
   host_gym: Database['public']['Tables']['gyms']['Row'];
   creator: Database['public']['Tables']['user_profiles']['Row'];
 };
@@ -19,6 +19,12 @@ export const useEvents = () => {
     setLoading(true);
     try {
       if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        const stored = localStorage.getItem('demoEvents');
+        if (stored) {
+          setEvents(JSON.parse(stored));
+          return;
+        }
+
         const mockEvents = [
           {
             id: 'demo-event-1',
@@ -77,6 +83,7 @@ export const useEvents = () => {
         ];
         
         setEvents(mockEvents);
+        localStorage.setItem('demoEvents', JSON.stringify(mockEvents));
         return;
       }
 
@@ -102,7 +109,17 @@ export const useEvents = () => {
     fetchEvents();
   }, [fetchEvents]);
 
-  return { events, loading, error, refetch: fetchEvents };
+  const addEvent = (event: EventWithRelations) => {
+    setEvents((prev) => {
+      const updated = [...prev, event];
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoEvents', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  return { events, loading, error, refetch: fetchEvents, addEvent };
 };
 
 type GymnastWithUser = Database['public']['Tables']['gymnasts']['Row'] & {
