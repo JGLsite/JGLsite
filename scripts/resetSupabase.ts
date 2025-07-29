@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { Client } from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
 async function run() {
   const dbUrl = process.env.SUPABASE_DB_URL;
@@ -13,6 +16,9 @@ async function run() {
   await client.connect();
 
   try {
+    console.log('Resetting public schema...');
+    await client.query('DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;');
+
     const migrationsDir = path.join(__dirname, '..', 'supabase', 'migrations');
     const files = fs.readdirSync(migrationsDir).sort();
 
@@ -32,3 +38,4 @@ run().catch((err) => {
   console.error('Failed to run migrations:', err);
   process.exit(1);
 });
+
