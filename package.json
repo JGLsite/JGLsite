@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "reset-supabase": "ts-node scripts/resetSupabase.ts"
+    "reset-supabase": "ts-node-esm scripts/resetSupabase.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.52.0",
