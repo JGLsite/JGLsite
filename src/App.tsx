@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { GymnastProvider } from './contexts/GymnastContext';
 import { LandingPage } from './components/Layout/LandingPage';
 import { LoginForm } from './components/Auth/LoginForm';
+import { SignupForm } from './components/Auth/SignupForm';
 import { Header } from './components/Layout/Header';
 import { AdminDashboard } from './components/Dashboard/AdminDashboard';
 import { CoachDashboard } from './components/Dashboard/CoachDashboard';
@@ -16,7 +17,7 @@ import { MemberManagement } from './components/Members/MemberManagement';
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [showLogin, setShowLogin] = useState(false);
+  const [authScreen, setAuthScreen] = useState<'login' | 'signup' | null>(null);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
 
   if (isLoading) {
@@ -31,10 +32,13 @@ const AppContent: React.FC = () => {
   }
 
   if (!user) {
-    if (showLogin) {
-      return <LoginForm />;
+    if (authScreen === 'login') {
+      return <LoginForm onShowSignup={() => setAuthScreen('signup')} />;
     }
-    return <LandingPage onGetStarted={() => setShowLogin(true)} />;
+    if (authScreen === 'signup') {
+      return <SignupForm onShowLogin={() => setAuthScreen('login')} />;
+    }
+    return <LandingPage onGetStarted={() => setAuthScreen('login')} />;
   }
 
   const renderContent = () => {

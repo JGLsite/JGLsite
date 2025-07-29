@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as AuthUser } from '@supabase/supabase-js';
-import { supabase, signIn, signOut, getUserProfile, isSupabaseConfigured } from '../lib/supabase';
+import {
+  supabase,
+  signIn,
+  signOut,
+  signUp as supabaseSignUp,
+  getUserProfile,
+  isSupabaseConfigured
+} from '../lib/supabase';
 import { Database } from '../types/database';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'] & {
@@ -11,6 +18,12 @@ interface AuthContextType {
   user: UserProfile | null;
   authUser: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   error: string | null;
@@ -185,6 +198,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signUp = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => {
+    setIsLoading(true);
+    setError(null);
+
+    if (!isSupabaseConfigured) {
+      const demoUser: UserProfile = {
+        id: `demo-${Date.now()}`,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role: 'gymnast',
+        gym_id: null,
+        phone: null,
+        date_of_birth: null,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setUser(demoUser);
+      localStorage.setItem('demoUser', JSON.stringify(demoUser));
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabaseSignUp(email, password, {
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role: 'gymnast',
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Automatically log the user in after successful signup
+      const { error: loginError } = await signIn(email, password);
+      if (loginError) {
+        throw new Error(loginError.message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign up failed');
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     console.log('Logging out...');
     setError(null);
@@ -205,7 +270,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, authUser, login, logout, isLoading, error }}>
+    <AuthContext.Provider
+      value={{ user, authUser, login, signUp, logout, isLoading, error }}
+    >
       {children}
     </AuthContext.Provider>
   );
