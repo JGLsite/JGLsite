@@ -98,6 +98,10 @@ application checks the current session and loads the user profile. Watch the
 console to confirm that your credentials load correctly and the Supabase client
 initializes without errors.
 
+Every request to Supabase is logged in development mode, showing the HTTP
+method, URL, response status, and how long the request took. Errors are printed
+to the console to help diagnose network or permission issues.
+
 ## 🗄️ Database Schema
 
 The system uses a comprehensive PostgreSQL schema with:

@@ -25,10 +25,28 @@ if (import.meta.env.DEV) {
   }
 }
 
+const loggingFetch = async (url: string, options?: RequestInit) => {
+  const start = Date.now();
+  devLog('[supabase] fetch', options?.method || 'GET', url);
+  try {
+    const res = await fetch(url, options);
+    devLog(
+      '[supabase] response',
+      res.status,
+      url,
+      `${Date.now() - start}ms`
+    );
+    return res;
+  } catch (err) {
+    devError('[supabase] fetch error:', err);
+    throw err;
+  }
+};
+
 export const supabase: SupabaseClient<Database> = isSupabaseConfigured
-  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey, { global: { fetch: loggingFetch } })
   // @ts-expect-error - create a dummy client to avoid runtime crashes in demo mode
-  : (createClient('https://demo.supabase.co', 'demo-key') as SupabaseClient<Database>);
+  : (createClient('https://demo.supabase.co', 'demo-key', { global: { fetch: loggingFetch } }) as SupabaseClient<Database>);
 
 // Auth helpers
 export const signUp = async (
@@ -36,6 +54,7 @@ export const signUp = async (
   password: string,
   userData: Database['public']['Tables']['user_profiles']['Insert']
 ) => {
+  devLog('[supabase] signUp', email);
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -49,15 +68,23 @@ export const signUp = async (
 };
 
 export const signIn = async (email: string, password: string) => {
+  devLog('[supabase] signIn', email);
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
+  if (error) {
+    devError('[supabase] signIn error:', error);
+  }
   return { data, error };
 };
 
 export const signOut = async () => {
+  devLog('[supabase] signOut');
   const { error } = await supabase.auth.signOut();
+  if (error) {
+    devError('[supabase] signOut error:', error);
+  }
   return { error };
 };
 
