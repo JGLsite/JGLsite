@@ -1,9 +1,14 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Users, Calendar, Trophy, TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { useEvents, useNotifications } from '../../hooks/useSupabaseData';
 
-export const AdminDashboard: React.FC = () => {
+interface AdminDashboardProps {
+  onCreateEvent?: () => void;
+}
+
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({
+  onCreateEvent = () => alert('Create event feature coming soon!'),
+}) => {
   const { events } = useEvents();
   const { notifications } = useNotifications();
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
@@ -233,8 +238,8 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </button>
               
-              <button 
-                onClick={() => alert('Create event feature coming soon!')}
+              <button
+                onClick={onCreateEvent}
                 className="w-full text-left p-4 rounded-xl border border-gray-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-blue-50 hover:border-green-200 transition-all duration-200 hover:shadow-md"
               >
                 <div className="flex items-center space-x-3">

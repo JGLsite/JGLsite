@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Users, DollarSign, Plus, Edit, Eye, Trash2 } from 'lucide-react';
 import { useEvents } from '../../hooks/useSupabaseData';
 import { isSupabaseConfigured, createEvent } from '../../lib/supabase';
 import type { Database } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 
-export const EventManagement: React.FC = () => {
+interface EventManagementProps {
+  showCreateOnLoad?: boolean;
+  onCreateFormClose?: () => void;
+}
+
+export const EventManagement: React.FC<EventManagementProps> = ({
+  showCreateOnLoad = false,
+  onCreateFormClose,
+}) => {
   const { user } = useAuth();
   const { events, loading, error, refetch } = useEvents();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -19,6 +27,12 @@ export const EventManagement: React.FC = () => {
     max_participants: '',
     registration_deadline: '',
   });
+
+  useEffect(() => {
+    if (showCreateOnLoad) {
+      setShowCreateForm(true);
+    }
+  }, [showCreateOnLoad]);
 
   if (loading) {
     return (
@@ -87,6 +101,7 @@ export const EventManagement: React.FC = () => {
       registration_deadline: '',
     });
     setShowCreateForm(false);
+    onCreateFormClose?.();
   };
 
   return (
@@ -260,7 +275,10 @@ export const EventManagement: React.FC = () => {
               <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
                 <button
                   type="button"
-                  onClick={() => setShowCreateForm(false)}
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    onCreateFormClose?.();
+                  }}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
