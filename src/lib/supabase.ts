@@ -194,6 +194,18 @@ export const createEvent = async (
   return { data, error };
 };
 
+export const updateEvent = async (
+  id: string,
+  updates: Database['public']['Tables']['events']['Update']
+) => {
+  const { data, error } = await supabase
+    .from('events')
+    .update(updates)
+    .eq('id', id)
+    .single();
+  return { data, error };
+};
+
 // Real-time subscriptions
 import type {
   RealtimePostgresChangesPayload,

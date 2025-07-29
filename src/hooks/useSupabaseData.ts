@@ -119,7 +119,17 @@ export const useEvents = () => {
     });
   };
 
-  return { events, loading, error, refetch: fetchEvents, addEvent };
+  const updateEvent = (updatedEvent: EventWithRelations) => {
+    setEvents((prev) => {
+      const updated = prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e));
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoEvents', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  return { events, loading, error, refetch: fetchEvents, addEvent, updateEvent };
 };
 
 type GymnastWithUser = Database['public']['Tables']['gymnasts']['Row'] & {
