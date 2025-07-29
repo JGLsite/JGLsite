@@ -31,6 +31,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+if (import.meta.env.DEV) {
+  console.log('[auth] Supabase configured:', isSupabaseConfigured);
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -89,6 +93,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log('[auth] AuthProvider initializing');
+    }
+
     // Check for demo mode first
     const demoUser = localStorage.getItem('demoUser');
     if (demoUser) {
@@ -105,7 +113,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    if (import.meta.env.DEV) {
+      console.log('[auth] Checking existing session');
+    }
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (import.meta.env.DEV) {
+        console.log('[auth] getSession result', session, error);
+      }
       if (session?.user) {
         setAuthUser(session.user);
         loadUserProfile(session.user.id);
@@ -117,6 +131,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (import.meta.env.DEV) {
+          console.log('[auth] onAuthStateChange', event, session);
+        }
         if (session?.user) {
           setAuthUser(session.user);
           await loadUserProfile(session.user.id);
@@ -128,10 +145,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (import.meta.env.DEV) {
+        console.log('[auth] auth subscription cleanup');
+      }
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadUserProfile = async (userId: string) => {
+    if (import.meta.env.DEV) {
+      console.log('[auth] loadUserProfile', userId);
+    }
     try {
       const { data, error } = await getUserProfile(userId);
       if (error) {
@@ -144,6 +169,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error loading user profile:', err);
       setError('Failed to load user profile');
     } finally {
+      if (import.meta.env.DEV) {
+        console.log('[auth] loadUserProfile complete');
+      }
       setIsLoading(false);
     }
   };
