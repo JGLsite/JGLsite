@@ -1,0 +1,34 @@
+import fs from 'fs';
+import path from 'path';
+import { Client } from 'pg';
+
+async function run() {
+  const dbUrl = process.env.SUPABASE_DB_URL;
+  if (!dbUrl) {
+    console.error('SUPABASE_DB_URL environment variable is not set.');
+    process.exit(1);
+  }
+
+  const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  await client.connect();
+
+  try {
+    const migrationsDir = path.join(__dirname, '..', 'supabase', 'migrations');
+    const files = fs.readdirSync(migrationsDir).sort();
+
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      console.log(`Running migration: ${file}`);
+      await client.query(sql);
+    }
+
+    console.log('Migrations applied successfully.');
+  } finally {
+    await client.end();
+  }
+}
+
+run().catch((err) => {
+  console.error('Failed to run migrations:', err);
+  process.exit(1);
+});

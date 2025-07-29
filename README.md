@@ -71,9 +71,13 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 
 ### 3. Database Setup
 
-1. **Connect to Supabase** using the "Connect to Supabase" button in the app
-2. **Run Migrations**: The database schema will be automatically created
-3. **Seed Demo Data**: Sample gyms, events, and challenges will be populated
+1. **Connect to Supabase** by setting `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your `.env` file
+2. **Run Migrations** using the provided script:
+   ```bash
+   npm run reset-supabase
+   ```
+   This script applies the SQL files in `supabase/migrations` to the database specified by the `SUPABASE_DB_URL` environment variable.
+3. **Seed Demo Data** *(optional)*: Populate initial gyms, events, and challenges after the migrations are applied.
 
 ### 4. Start Development
 ```bash
