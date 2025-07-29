@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as AuthUser } from '@supabase/supabase-js';
-import { supabase, signIn, signOut, getUserProfile } from '../lib/supabase';
+import { supabase, signIn, signOut, getUserProfile, isSupabaseConfigured } from '../lib/supabase';
 import { Database } from '../types/database';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'] & {
@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
 
-    // ALWAYS check for demo credentials first
+    // Demo credentials
     if (password === 'demo123' && demoUsers[email]) {
       console.log('Using demo mode for:', email);
       const demoUser = demoUsers[email];
@@ -150,14 +150,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // If not demo credentials, try Supabase auth
+    if (!isSupabaseConfigured) {
+      setError('Supabase credentials are not configured.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       console.log('Attempting Supabase login...');
       const { error } = await signIn(email, password);
       if (error) {
         console.error('Supabase login error:', error);
-        
-        // If it's an email confirmation error and password is demo123, try demo mode
+
         if (error.message.includes('Email not confirmed') && password === 'demo123') {
           console.log('Email not confirmed, checking for demo fallback...');
           const demoUser = demoUsers[email];
@@ -169,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
         }
-        
+
         throw new Error(error.message);
       }
       console.log('Supabase login successful');

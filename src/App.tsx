@@ -17,6 +17,7 @@ const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showLogin, setShowLogin] = useState(false);
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
 
   if (isLoading) {
     return (
@@ -39,13 +40,26 @@ const AppContent: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        if (user.role === 'admin') return <AdminDashboard />;
+        if (user.role === 'admin')
+          return (
+            <AdminDashboard
+              onCreateEvent={() => {
+                setShowCreateEvent(true);
+                setActiveTab('events');
+              }}
+            />
+          );
         if (user.role === 'coach' || user.role === 'gym_admin') return <CoachDashboard />;
         if (user.role === 'gymnast') return <GymnastDashboard />;
         return <AdminDashboard />;
-      
+
       case 'events':
-        return <EventManagement />;
+        return (
+          <EventManagement
+            showCreateOnLoad={showCreateEvent}
+            onCreateFormClose={() => setShowCreateEvent(false)}
+          />
+        );
       
       case 'gymnasts':
         return <GymnastManagement />;

@@ -1,14 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Users, DollarSign, Plus, Edit, Eye, Trash2 } from 'lucide-react';
-import { useEvents } from '../../hooks/useSupabaseData';
-import { isSupabaseConfigured, createEvent } from '../../lib/supabase';
+import { useEvents, EventWithRelations } from '../../hooks/useSupabaseData';
+import { isSupabaseConfigured, createEvent, updateEvent as updateEventApi } from '../../lib/supabase';
 import type { Database } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 
-export const EventManagement: React.FC = () => {
+interface EventManagementProps {
+  showCreateOnLoad?: boolean;
+  onCreateFormClose?: () => void;
+}
+
+export const EventManagement: React.FC<EventManagementProps> = ({
+  showCreateOnLoad = false,
+  onCreateFormClose,
+}) => {
   const { user } = useAuth();
-  const { events, loading, error, refetch } = useEvents();
+  const { events, loading, error, refetch, addEvent, updateEvent } = useEvents();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventWithRelations | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     event_date: '',
@@ -19,6 +28,13 @@ export const EventManagement: React.FC = () => {
     max_participants: '',
     registration_deadline: '',
   });
+
+  useEffect(() => {
+    if (showCreateOnLoad) {
+      setShowCreateForm(true);
+      setEditingEvent(null);
+    }
+  }, [showCreateOnLoad]);
 
   if (loading) {
     return (
@@ -46,34 +62,79 @@ export const EventManagement: React.FC = () => {
     }
   };
 
-  const handleCreateEvent = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newEvent: Database['public']['Tables']['events']['Insert'] = {
-      title: formData.title,
-      description: formData.description || null,
-      event_date: formData.event_date,
-      event_time: null,
-      location: formData.location,
-      host_gym_id: user?.gym_id || '',
-      registration_deadline: formData.registration_deadline,
-      max_participants: formData.max_participants
-        ? Number(formData.max_participants)
-        : null,
-      entry_fee: Number(formData.entry_fee),
-      ticket_price: Number(formData.ticket_price),
-      status: 'draft' as const,
-      levels_allowed: [],
-      age_groups: [],
-      created_by: user?.id || '',
-    };
+    if (editingEvent) {
+      const updates: Database['public']['Tables']['events']['Update'] = {
+        title: formData.title,
+        description: formData.description || null,
+        event_date: formData.event_date,
+        location: formData.location,
+        registration_deadline: formData.registration_deadline,
+        max_participants: formData.max_participants
+          ? Number(formData.max_participants)
+          : null,
+        entry_fee: Number(formData.entry_fee),
+        ticket_price: Number(formData.ticket_price),
+        updated_at: new Date().toISOString(),
+      };
 
-    if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
-      const { error } = await createEvent(newEvent);
-      if (error) {
-        alert('Failed to create event: ' + error.message);
-        return;
+      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+        const { error } = await updateEventApi(editingEvent.id, updates);
+        if (error) {
+          alert('Failed to update event: ' + error.message);
+          return;
+        }
+        await refetch();
+      } else {
+        updateEvent({
+          ...editingEvent,
+          ...updates,
+        } as EventWithRelations);
       }
-      await refetch();
+    } else {
+      const newEvent: Database['public']['Tables']['events']['Insert'] = {
+        title: formData.title,
+        description: formData.description || null,
+        event_date: formData.event_date,
+        event_time: null,
+        location: formData.location,
+        host_gym_id: user?.gym_id || '',
+        registration_deadline: formData.registration_deadline,
+        max_participants: formData.max_participants
+          ? Number(formData.max_participants)
+          : null,
+        entry_fee: Number(formData.entry_fee),
+        ticket_price: Number(formData.ticket_price),
+        status: 'open' as const,
+        levels_allowed: [],
+        age_groups: [],
+        created_by: user?.id || '',
+      };
+
+      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+        const { error } = await createEvent(newEvent);
+        if (error) {
+          alert('Failed to create event: ' + error.message);
+          return;
+        }
+        await refetch();
+      } else {
+        addEvent({
+          ...newEvent,
+          id: `demo-${Date.now()}`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          host_gym: {
+            name: user?.gym?.name || 'Demo Gym',
+            city: user?.gym?.city || 'Demo City',
+          },
+          creator: {
+            first_name: user?.first_name || 'Demo',
+            last_name: user?.last_name || 'User',
+          },
+        } as EventWithRelations);
+      }
     }
 
     setFormData({
@@ -87,6 +148,23 @@ export const EventManagement: React.FC = () => {
       registration_deadline: '',
     });
     setShowCreateForm(false);
+    setEditingEvent(null);
+    onCreateFormClose?.();
+  };
+
+  const startEdit = (event: EventWithRelations) => {
+    setEditingEvent(event);
+    setFormData({
+      title: event.title,
+      event_date: event.event_date,
+      description: event.description || '',
+      location: event.location,
+      entry_fee: event.entry_fee,
+      ticket_price: event.ticket_price,
+      max_participants: event.max_participants ? String(event.max_participants) : '',
+      registration_deadline: event.registration_deadline,
+    });
+    setShowCreateForm(true);
   };
 
   return (
@@ -145,7 +223,10 @@ export const EventManagement: React.FC = () => {
                   <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
                     <Eye className="w-4 h-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-green-600 transition-colors">
+                  <button
+                    className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                    onClick={() => startEdit(event)}
+                  >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
@@ -163,10 +244,12 @@ export const EventManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Create New Event</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingEvent ? 'Edit Event' : 'Create New Event'}
+              </h2>
             </div>
-            
-            <form className="p-6 space-y-4" onSubmit={handleCreateEvent}>
+
+            <form className="p-6 space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
@@ -256,19 +339,27 @@ export const EventManagement: React.FC = () => {
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-            </form>
 
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                Create Event
-              </button>
-            </div>
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setEditingEvent(null);
+                    onCreateFormClose?.();
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {editingEvent ? 'Update Event' : 'Create Event'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
