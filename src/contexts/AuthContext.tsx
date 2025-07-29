@@ -153,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // If not demo credentials, try Supabase auth
     try {
       console.log('Attempting Supabase login...');
-      const { data, error } = await signIn(email, password);
+      const { error } = await signIn(email, password);
       if (error) {
         console.error('Supabase login error:', error);
         

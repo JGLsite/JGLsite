@@ -1,17 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase: SupabaseClient<Database> = isSupabaseConfigured
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  // @ts-expect-error - create a dummy client to avoid runtime crashes in demo mode
+  : (createClient('https://demo.supabase.co', 'demo-key') as SupabaseClient<Database>);
 
 // Auth helpers
-export const signUp = async (email: string, password: string, userData: any) => {
+export const signUp = async (
+  email: string,
+  password: string,
+  userData: Database['public']['Tables']['user_profiles']['Insert']
+) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -174,12 +179,33 @@ export const markNotificationAsRead = async (notificationId: string) => {
     .from('notifications')
     .update({ is_read: true })
     .eq('id', notificationId);
-  
+
+  return { data, error };
+};
+
+// Creation helpers
+export const createEvent = async (
+  event: Database['public']['Tables']['events']['Insert']
+) => {
+  const { data, error } = await supabase
+    .from('events')
+    .insert(event)
+    .single();
   return { data, error };
 };
 
 // Real-time subscriptions
-export const subscribeToRegistrations = (callback: (payload: any) => void) => {
+import type {
+  RealtimePostgresChangesPayload,
+} from '@supabase/realtime-js';
+
+export const subscribeToRegistrations = (
+  callback: (
+    payload: RealtimePostgresChangesPayload<
+      Database['public']['Tables']['registrations']['Row']
+    >
+  ) => void
+) => {
   return supabase
     .channel('registrations')
     .on('postgres_changes', 
@@ -189,7 +215,14 @@ export const subscribeToRegistrations = (callback: (payload: any) => void) => {
     .subscribe();
 };
 
-export const subscribeToNotifications = (userId: string, callback: (payload: any) => void) => {
+export const subscribeToNotifications = (
+  userId: string,
+  callback: (
+    payload: RealtimePostgresChangesPayload<
+      Database['public']['Tables']['notifications']['Row']
+    >
+  ) => void
+) => {
   return supabase
     .channel('notifications')
     .on('postgres_changes', 

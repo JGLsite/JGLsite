@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy, Star, Target, Award, Clock, CheckCircle, Play } from 'lucide-react';
+import { Trophy, Target, Award, Clock, CheckCircle, Play } from 'lucide-react';
 import { useChallenges } from '../../hooks/useSupabaseData';
 
 export const ChallengeSystem: React.FC = () => {
