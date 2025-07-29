@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
 import { Calendar, MapPin, Users, DollarSign, Plus, Edit, Eye, Trash2 } from 'lucide-react';
 import { useEvents } from '../../hooks/useSupabaseData';
-import { supabase } from '../../lib/supabase';
+import { isSupabaseConfigured, createEvent } from '../../lib/supabase';
+import type { Database } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const EventManagement: React.FC = () => {
   const { user } = useAuth();
-  const { events, loading, error } = useEvents();
+  const { events, loading, error, refetch } = useEvents();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    event_date: '',
+    description: '',
+    location: '',
+    entry_fee: 0,
+    ticket_price: 0,
+    max_participants: '',
+    registration_deadline: '',
+  });
 
   if (loading) {
     return (
@@ -33,6 +44,49 @@ export const EventManagement: React.FC = () => {
       case 'completed': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newEvent: Database['public']['Tables']['events']['Insert'] = {
+      title: formData.title,
+      description: formData.description || null,
+      event_date: formData.event_date,
+      event_time: null,
+      location: formData.location,
+      host_gym_id: user?.gym_id || '',
+      registration_deadline: formData.registration_deadline,
+      max_participants: formData.max_participants
+        ? Number(formData.max_participants)
+        : null,
+      entry_fee: Number(formData.entry_fee),
+      ticket_price: Number(formData.ticket_price),
+      status: 'draft' as const,
+      levels_allowed: [],
+      age_groups: [],
+      created_by: user?.id || '',
+    };
+
+    if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+      const { error } = await createEvent(newEvent);
+      if (error) {
+        alert('Failed to create event: ' + error.message);
+        return;
+      }
+      await refetch();
+    }
+
+    setFormData({
+      title: '',
+      event_date: '',
+      description: '',
+      location: '',
+      entry_fee: 0,
+      ticket_price: 0,
+      max_participants: '',
+      registration_deadline: '',
+    });
+    setShowCreateForm(false);
   };
 
   return (
@@ -112,12 +166,14 @@ export const EventManagement: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900">Create New Event</h2>
             </div>
             
-            <form className="p-6 space-y-4">
+            <form className="p-6 space-y-4" onSubmit={handleCreateEvent}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
                   <input
                     type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter event title"
                   />
@@ -127,6 +183,8 @@ export const EventManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Event Date</label>
                   <input
                     type="date"
+                    value={formData.event_date}
+                    onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
@@ -136,6 +194,8 @@ export const EventManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                   rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter event description"
                 />
@@ -145,6 +205,8 @@ export const EventManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                 <input
                   type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter event location"
                 />
@@ -155,6 +217,8 @@ export const EventManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Entry Fee ($)</label>
                   <input
                     type="number"
+                    value={formData.entry_fee}
+                    onChange={(e) => setFormData({ ...formData, entry_fee: Number(e.target.value) })}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="0"
                   />
@@ -164,6 +228,8 @@ export const EventManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ticket Price ($)</label>
                   <input
                     type="number"
+                    value={formData.ticket_price}
+                    onChange={(e) => setFormData({ ...formData, ticket_price: Number(e.target.value) })}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="0"
                   />
@@ -173,6 +239,8 @@ export const EventManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max Participants</label>
                   <input
                     type="number"
+                    value={formData.max_participants}
+                    onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Optional"
                   />
@@ -183,6 +251,8 @@ export const EventManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Registration Deadline</label>
                 <input
                   type="date"
+                  value={formData.registration_deadline}
+                  onChange={(e) => setFormData({ ...formData, registration_deadline: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -195,7 +265,7 @@ export const EventManagement: React.FC = () => {
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 Create Event
               </button>
             </div>

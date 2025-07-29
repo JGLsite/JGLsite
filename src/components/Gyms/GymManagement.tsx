@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, MapPin, Phone, Mail, Globe, CheckCircle, Clock, X, Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Building2, MapPin, Phone, Mail, Globe, CheckCircle, Clock, Plus, Edit, Trash2, Users } from 'lucide-react';
 
 interface Gym {
   id: string;

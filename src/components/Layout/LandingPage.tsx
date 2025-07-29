@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Trophy, Calendar, Users, Star, ArrowRight, CheckCircle, Target, Award } from 'lucide-react';
+import React from 'react';
+import { Trophy, Calendar, Users, ArrowRight, Target } from 'lucide-react';
 
 interface LandingPageProps {
   onGetStarted: () => void;
