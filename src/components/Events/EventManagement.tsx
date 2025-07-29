@@ -106,7 +106,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
           : null,
         entry_fee: Number(formData.entry_fee),
         ticket_price: Number(formData.ticket_price),
-        status: 'draft' as const,
+        status: 'open' as const,
         levels_allowed: [],
         age_groups: [],
         created_by: user?.id || '',
