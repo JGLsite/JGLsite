@@ -170,8 +170,7 @@ export const MemberManagement: React.FC = () => {
           date_of_birth: formData.dateOfBirth || null,
           is_active: true,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          gym: null
+          updated_at: new Date().toISOString()
         };
 
         if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {

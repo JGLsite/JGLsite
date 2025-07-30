@@ -129,7 +129,7 @@ export const getUserProfile = async (userId: string) => {
 
     // Create a timeout promise
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Profile query timeout')), 3000);
+      setTimeout(() => reject(new Error('Profile query timeout')), 10000);
     });
 
     // Create the actual query promise
