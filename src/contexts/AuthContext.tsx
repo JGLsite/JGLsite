@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as AuthUser } from '@supabase/supabase-js';
-import { supabase, signIn, signOut, getUserProfile } from '../lib/supabase';
+import {
+  supabase,
+  signIn,
+  signOut,
+  signUp as supabaseSignUp,
+  getUserProfile,
+  isSupabaseConfigured
+} from '../lib/supabase';
 import { Database } from '../types/database';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'] & {
@@ -11,12 +18,22 @@ interface AuthContextType {
   user: UserProfile | null;
   authUser: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+if (import.meta.env.DEV) {
+  console.log('[auth] Supabase configured:', isSupabaseConfigured);
+}
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -76,6 +93,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      console.log('[auth] AuthProvider initializing');
+    }
+
     // Check for demo mode first
     const demoUser = localStorage.getItem('demoUser');
     if (demoUser) {
@@ -92,7 +113,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    if (import.meta.env.DEV) {
+      console.log('[auth] Checking existing session');
+    }
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (import.meta.env.DEV) {
+        console.log('[auth] getSession result', session, error);
+      }
       if (session?.user) {
         setAuthUser(session.user);
         loadUserProfile(session.user.id);
@@ -104,6 +131,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (import.meta.env.DEV) {
+          console.log('[auth] onAuthStateChange', event, session);
+        }
         if (session?.user) {
           setAuthUser(session.user);
           await loadUserProfile(session.user.id);
@@ -115,10 +145,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (import.meta.env.DEV) {
+        console.log('[auth] auth subscription cleanup');
+      }
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadUserProfile = async (userId: string) => {
+    if (import.meta.env.DEV) {
+      console.log('[auth] loadUserProfile', userId);
+    }
     try {
       const { data, error } = await getUserProfile(userId);
       if (error) {
@@ -131,6 +169,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error loading user profile:', err);
       setError('Failed to load user profile');
     } finally {
+      if (import.meta.env.DEV) {
+        console.log('[auth] loadUserProfile complete');
+      }
       setIsLoading(false);
     }
   };
@@ -140,7 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
 
-    // ALWAYS check for demo credentials first
+    // Demo credentials
     if (password === 'demo123' && demoUsers[email]) {
       console.log('Using demo mode for:', email);
       const demoUser = demoUsers[email];
@@ -150,14 +191,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // If not demo credentials, try Supabase auth
+    if (!isSupabaseConfigured) {
+      setError('Supabase credentials are not configured.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       console.log('Attempting Supabase login...');
-      const { data, error } = await signIn(email, password);
+      const { error } = await signIn(email, password);
       if (error) {
         console.error('Supabase login error:', error);
-        
-        // If it's an email confirmation error and password is demo123, try demo mode
+
         if (error.message.includes('Email not confirmed') && password === 'demo123') {
           console.log('Email not confirmed, checking for demo fallback...');
           const demoUser = demoUsers[email];
@@ -169,7 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
         }
-        
+
         throw new Error(error.message);
       }
       console.log('Supabase login successful');
@@ -177,6 +222,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Login failed:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
+      setIsLoading(false);
+    }
+  };
+
+  const signUp = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => {
+    setIsLoading(true);
+    setError(null);
+
+    if (!isSupabaseConfigured) {
+      const demoUser: UserProfile = {
+        id: `demo-${Date.now()}`,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role: 'gymnast',
+        gym_id: null,
+        phone: null,
+        date_of_birth: null,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setUser(demoUser);
+      localStorage.setItem('demoUser', JSON.stringify(demoUser));
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabaseSignUp(email, password, {
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role: 'gymnast',
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Automatically log the user in after successful signup
+      const { error: loginError } = await signIn(email, password);
+      if (loginError) {
+        throw new Error(loginError.message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign up failed');
       setIsLoading(false);
     }
   };
@@ -201,7 +298,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, authUser, login, logout, isLoading, error }}>
+    <AuthContext.Provider
+      value={{ user, authUser, login, signUp, logout, isLoading, error }}
+    >
       {children}
     </AuthContext.Provider>
   );

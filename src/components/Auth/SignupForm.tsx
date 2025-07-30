@@ -1,45 +1,38 @@
 import React, { useState } from 'react';
-import { Trophy, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Trophy, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface LoginFormProps {
-  onShowSignup: () => void;
+interface SignupFormProps {
+  onShowLogin: () => void;
 }
-export const LoginForm: React.FC<LoginFormProps> = ({ onShowSignup }) => {
+
+export const SignupForm: React.FC<SignupFormProps> = ({ onShowLogin }) => {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const { login, isLoading } = useAuth();
+  const [localError, setLocalError] = useState('');
+  const { signUp, isLoading, error } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    console.log('Form submitted with:', email, password);
-    
+    setLocalError('');
     try {
-      await login(email, password);
-      console.log('Login successful!');
+      await signUp(email, password, firstName, lastName);
     } catch (err) {
-      console.error('Login error in form:', err);
-      setError(err instanceof Error ? err.message : 'Invalid email or password');
+      setLocalError(err instanceof Error ? err.message : 'Sign up failed');
     }
   };
 
-  const demoAccounts = [
-    { email: 'admin@demo.com', role: 'League Admin', password: 'demo123' },
-    { email: 'coach@demo.com', role: 'Coach', password: 'demo123' },
-    { email: 'gymnast@demo.com', role: 'Gymnast', password: 'demo123' },
-  ];
+  const errorMessage = localError || error || '';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-400/20 to-blue-400/20 rounded-full blur-3xl" />
       </div>
-      
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">
@@ -48,29 +41,52 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onShowSignup }) => {
               <Trophy className="relative w-20 h-20 text-blue-600" />
             </div>
           </div>
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">
-            Jewish Gymnastics League
-          </h2>
-          <p className="text-lg text-gray-600 mb-2">
-            Management Portal
-          </p>
-          <p className="text-sm text-gray-500">
-            Sign in to access your dashboard
-          </p>
+          <h2 className="text-4xl font-bold text-gray-900 mb-2">Create Your Account</h2>
+          <p className="text-sm text-gray-500">Sign up to get started</p>
         </div>
-
         <div className="relative bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
+            {errorMessage && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
-                {error}
+                {errorMessage}
               </div>
             )}
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name</label>
+                <div className="mt-1 relative">
+                  <User className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+                  <input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="pl-12 block w-full border border-gray-300 rounded-xl px-4 py-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    placeholder="First name"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label>
+                <div className="mt-1 relative">
+                  <User className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+                  <input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="pl-12 block w-full border border-gray-300 rounded-xl px-4 py-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
+            </div>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
               <div className="mt-1 relative">
                 <Mail className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                 <input
@@ -85,11 +101,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onShowSignup }) => {
                 />
               </div>
             </div>
-
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
               <div className="mt-1 relative">
                 <Lock className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                 <input
@@ -111,42 +124,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onShowSignup }) => {
                 </button>
               </div>
             </div>
-
             <button
               type="submit"
               disabled={isLoading}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-xl hover:scale-[1.02]"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-gray-200/50">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4 text-center">Quick Demo Access</h3>
-            <div className="space-y-2">
-              {demoAccounts.map((account, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setEmail(account.email);
-                    setPassword(account.password);
-                  }}
-                  className="w-full text-left px-4 py-3 text-sm bg-gradient-to-r from-gray-50 to-gray-100 hover:from-blue-50 hover:to-purple-50 rounded-xl transition-all duration-200 border border-gray-200 hover:border-blue-200 hover:shadow-md"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-gray-900">{account.role}</div>
-                      <div className="text-gray-600 text-xs">{account.email}</div>
-                    </div>
-                    <div className="text-xs text-gray-400">Click to use</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="mt-6 text-center text-sm text-gray-600">
-            <button onClick={onShowSignup} className="text-blue-600 hover:underline" type="button">
-              Need an account? Sign up
+            <button onClick={onShowLogin} className="text-blue-600 hover:underline" type="button">
+              Already have an account? Sign in
             </button>
           </div>
         </div>

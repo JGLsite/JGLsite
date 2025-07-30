@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Users, Search, Filter, CheckCircle, Clock, X, Plus, Mail } from 'lucide-react';
+import { Users, Search, Filter, CheckCircle, Clock, Plus, Mail } from 'lucide-react';
 import { useGymnastContext } from '../../contexts/GymnastContext';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const GymnastManagement: React.FC = () => {
   const { user } = useAuth();
-  const { gymnasts, updateGymnast, removeGymnast, loading } = useGymnastContext();
+  const { gymnasts, updateGymnast, loading } = useGymnastContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 

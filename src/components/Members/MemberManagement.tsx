@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Search, Filter, CheckCircle, Clock, X, Plus, Mail, Phone, Calendar, Trophy, Star, Edit, Trash2 } from 'lucide-react';
+import { Search, Filter, Plus, Edit, Trash2, Trophy } from 'lucide-react';
 
 interface Member {
   id: string;

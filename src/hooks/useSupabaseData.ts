@@ -1,16 +1,30 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import type { Database } from '../types/database';
+
+export type EventWithRelations = Database['public']['Tables']['events']['Row'] & {
+  host_gym: Database['public']['Tables']['gyms']['Row'];
+  creator: Database['public']['Tables']['user_profiles']['Row'];
+};
 
 export const useEvents = () => {
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<EventWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        // For demo mode, return mock events
+  const { user } = useAuth();
+
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        const stored = localStorage.getItem('demoEvents');
+        if (stored) {
+          setEvents(JSON.parse(stored));
+          return;
+        }
+
         const mockEvents = [
           {
             id: 'demo-event-1',
@@ -69,36 +83,62 @@ export const useEvents = () => {
         ];
         
         setEvents(mockEvents);
-        setLoading(false);
+        localStorage.setItem('demoEvents', JSON.stringify(mockEvents));
         return;
-
-        const { data, error } = await supabase
-          .from('events')
-          .select(`
-            *,
-            host_gym:gyms(*),
-            creator:user_profiles(*)
-          `)
-          .order('event_date', { ascending: true });
-
-        if (error) throw error;
-        setEvents(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch events');
-      } finally {
-        setLoading(false);
       }
-    };
 
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          *,
+          host_gym:gyms(*),
+          creator:user_profiles(*)
+        `)
+        .order('event_date', { ascending: true });
+
+      if (error) throw error;
+      setEvents(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch events');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
 
-  return { events, loading, error };
+  const addEvent = (event: EventWithRelations) => {
+    setEvents((prev) => {
+      const updated = [...prev, event];
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoEvents', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const updateEvent = (updatedEvent: EventWithRelations) => {
+    setEvents((prev) => {
+      const updated = prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e));
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoEvents', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  return { events, loading, error, refetch: fetchEvents, addEvent, updateEvent };
+};
+
+type GymnastWithUser = Database['public']['Tables']['gymnasts']['Row'] & {
+  user: Database['public']['Tables']['user_profiles']['Row'];
 };
 
 export const useGymnasts = () => {
   const { user } = useAuth();
-  const [gymnasts, setGymnasts] = useState<any[]>([]);
+  const [gymnasts, setGymnasts] = useState<GymnastWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -180,7 +220,9 @@ export const useGymnasts = () => {
 };
 
 export const useChallenges = () => {
-  const [challenges, setChallenges] = useState<any[]>([]);
+  const [challenges, setChallenges] = useState<
+    Database['public']['Tables']['challenges']['Row'][]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -256,8 +298,14 @@ export const useChallenges = () => {
 };
 
 export const useRegistrations = (eventId?: string) => {
-  const { user } = useAuth();
-  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [registrations, setRegistrations] = useState<
+    Array<
+      Database['public']['Tables']['registrations']['Row'] & {
+        event: Database['public']['Tables']['events']['Row'];
+        gymnast: GymnastWithUser;
+      }
+    >
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -298,7 +346,9 @@ export const useRegistrations = (eventId?: string) => {
 
 export const useNotifications = () => {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<
+    Database['public']['Tables']['notifications']['Row'][]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

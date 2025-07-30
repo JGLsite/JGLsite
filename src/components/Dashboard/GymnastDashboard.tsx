@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState } from 'react';
-import { Trophy, Calendar, Star, Target, Award, TrendingUp } from 'lucide-react';
+import { Trophy, Calendar, Target, Award } from 'lucide-react';
 import { useChallenges, useNotifications } from '../../hooks/useSupabaseData';
 import { useAuth } from '../../contexts/AuthContext';
 

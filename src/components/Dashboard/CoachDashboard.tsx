@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export const CoachDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { gymnasts, addGymnast, updateGymnast, removeGymnast, loading } = useGymnastContext();
+  const { gymnasts, addGymnast, updateGymnast, removeGymnast } = useGymnastContext();
   const { notifications } = useNotifications();
   const [showAddGymnastModal, setShowAddGymnastModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -179,17 +179,6 @@ export const CoachDashboard: React.FC = () => {
   };
 
   // Get coach's team name based on their gym
-  const getCoachTeamName = () => {
-    switch (user?.gym_id) {
-      case 'gym-spring': return 'Team Spring';
-      case 'gym-tovis': return 'Team Tovi\'s';
-      case 'gym-elite': return 'Team Elite';
-      case 'gym-metro': return 'Team Metro';
-      case 'gym-sunshine': return 'Team Sunshine';
-      case 'gym-pacific': return 'Team Pacific';
-      default: return 'Team Elite';
-    }
-  };
 
   return (
     <div className="space-y-6">

@@ -67,13 +67,18 @@ Edit `.env` with your Supabase credentials:
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_DB_URL=postgresql://username:password@db.supabase.co:5432/postgres
 ```
 
 ### 3. Database Setup
 
-1. **Connect to Supabase** using the "Connect to Supabase" button in the app
-2. **Run Migrations**: The database schema will be automatically created
-3. **Seed Demo Data**: Sample gyms, events, and challenges will be populated
+1. **Connect to Supabase** by setting `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `SUPABASE_DB_URL` in your `.env` file. The `SUPABASE_DB_URL` value should be the service role connection string from the Supabase dashboard.
+2. **Reset & Run Migrations** using the provided script:
+   ```bash
+   npm run reset-supabase
+   ```
+   This command drops the existing `public` schema and re-applies all SQL files in `supabase/migrations`.
+3. **Seed Demo Data** *(optional)*: Populate initial gyms, events, and challenges after the migrations are applied.
 
 ### 4. Start Development
 ```bash
@@ -81,6 +86,21 @@ npm run dev
 ```
 
 Visit `http://localhost:5173` to see the application.
+
+### Debugging Supabase Connection
+
+When running the app in development mode, the browser console logs whether your
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` variables were detected. If
+they are missing, the application falls back to demo data.
+
+Additional `[auth]` and `[supabase]` messages now show the steps taken when the
+application checks the current session and loads the user profile. Watch the
+console to confirm that your credentials load correctly and the Supabase client
+initializes without errors.
+
+Every request to Supabase is logged in development mode, showing the HTTP
+method, URL, response status, and how long the request took. Errors are printed
+to the console to help diagnose network or permission issues.
 
 ## 🗄️ Database Schema
 
