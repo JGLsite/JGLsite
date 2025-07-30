@@ -118,18 +118,31 @@ export const getCurrentUser = async () => {
 export const getUserProfile = async (userId: string) => {
   devLog('[supabase] getUserProfile for', userId);
   
-  try {
-      devLog('[supabase] getUserProfile try begin');
+  // Check if Supabase is configured, if not return null immediately
+  if (!isSupabaseConfigured) {
+    devLog('[supabase] Supabase not configured, returning null profile');
+    return { data: null, error: null };
+  }
 
-    const { data, error } = await supabase
+  try {
+    devLog('[supabase] getUserProfile try begin');
+
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Profile query timeout')), 3000);
+    });
+
+    // Create the actual query promise
+    const queryPromise = supabase
       .from('user_profiles')
-      .select(`
-        *,
-        gym:gyms(*)
-      `)
+      .select('*')
       .eq('id', userId)
       .maybeSingle();
-      devLog('[supabase] getUserProfile after await supabase');
+
+    // Race between timeout and query
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    
+    devLog('[supabase] getUserProfile after await supabase');
 
     if (error) {
       devError('[supabase] getUserProfile error:', error);
