@@ -93,25 +93,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+    
     if (import.meta.env.DEV) {
       console.log('[auth] AuthProvider initializing');
     }
 
-    // Get initial session
-    if (import.meta.env.DEV) {
-      console.log('[auth] Checking existing session');
-    }
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (import.meta.env.DEV) {
-        console.log('[auth] getSession result', session, error);
+    const initializeAuth = async () => {
+      try {
+        if (import.meta.env.DEV) {
+          console.log('[auth] Checking existing session');
+        }
+        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (import.meta.env.DEV) {
+          console.log('[auth] getSession result', session, error);
+        }
+        
+        if (!mounted) return;
+        
+        if (error) {
+          console.error('[auth] Session error:', error);
+          setError(error.message);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (session?.user) {
+          setAuthUser(session.user);
+          await loadUserProfile(session.user.id);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('[auth] Initialize auth error:', err);
+        if (mounted) {
+          setError('Failed to initialize authentication');
+          setIsLoading(false);
+        }
       }
-      if (session?.user) {
-        setAuthUser(session.user);
-        loadUserProfile(session.user.id);
-      } else {
+    };
+    
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn('[auth] Auth initialization timeout');
         setIsLoading(false);
       }
-    });
+    }, 10000); // 10 second timeout
+    
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -119,6 +151,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (import.meta.env.DEV) {
           console.log('[auth] onAuthStateChange', event, session);
         }
+        
+        if (!mounted) return;
+        
         if (session?.user) {
           setAuthUser(session.user);
           await loadUserProfile(session.user.id);
@@ -131,6 +166,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     return () => {
+      mounted = false;
+      clearTimeout(timeout);
       if (import.meta.env.DEV) {
         console.log('[auth] auth subscription cleanup');
       }
