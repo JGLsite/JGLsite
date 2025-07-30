@@ -8,6 +8,7 @@ import {
   getUserProfile,
   isSupabaseConfigured
 } from '../lib/supabase';
+import { log, error as logError, warn } from '../lib/logger';
 import { Database } from '../types/database';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'] & {
@@ -32,7 +33,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 if (import.meta.env.DEV) {
-  console.log('[auth] Supabase configured:', isSupabaseConfigured);
+  log('[auth] Supabase configured:', isSupabaseConfigured);
 }
 
 export const useAuth = () => {
@@ -54,25 +55,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     
     if (import.meta.env.DEV) {
-      console.log('[auth] AuthProvider initializing');
+      log('[auth] AuthProvider initializing');
     }
 
     const initializeAuth = async () => {
       try {
         if (import.meta.env.DEV) {
-          console.log('[auth] Checking existing session');
+          log('[auth] Checking existing session');
         }
         
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (import.meta.env.DEV) {
-          console.log('[auth] getSession result', session, error);
+          log('[auth] getSession result', session, error);
         }
         
         if (!mounted) return;
         
         if (error) {
-          console.error('[auth] Session error:', error);
+          logError('[auth] Session error:', error);
           setError(error.message);
           setIsLoading(false);
           return;
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsLoading(false);
         }
       } catch (err) {
-        console.error('[auth] Initialize auth error:', err);
+        logError('[auth] Initialize auth error:', err);
         if (mounted) {
           setError('Failed to initialize authentication');
           setIsLoading(false);
@@ -96,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Add timeout to prevent infinite loading
     const timeout = setTimeout(() => {
       if (mounted && isLoading) {
-        console.warn('[auth] Auth initialization timeout');
+        warn('[auth] Auth initialization timeout');
         setIsLoading(false);
       }
     }, 10000); // 10 second timeout
@@ -107,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (import.meta.env.DEV) {
-          console.log('[auth] onAuthStateChange', event, session);
+          log('[auth] onAuthStateChange', event, session);
         }
         
         if (!mounted) return;
@@ -127,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       clearTimeout(timeout);
       if (import.meta.env.DEV) {
-        console.log('[auth] auth subscription cleanup');
+        log('[auth] auth subscription cleanup');
       }
       subscription.unsubscribe();
     };
@@ -135,28 +136,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserProfile = async (userId: string) => {
     if (import.meta.env.DEV) {
-      console.log('[auth] loadUserProfile', userId);
+      log('[auth] loadUserProfile', userId);
     }
     try {
       const { data, error } = await getUserProfile(userId);
-      console.log('[auth] getUserProfile result:', { data, error });
+      log('[auth] getUserProfile result:', { data, error });
       if (error) {
         if (error.code === 'NO_PROFILE') {
-          console.warn('[auth] No user profile found - user may need to complete profile setup');
+          warn('[auth] No user profile found - user may need to complete profile setup');
         } else {
-          console.error('Error loading user profile:', error);
+          logError('Error loading user profile:', error);
         }
       }
       
       if (error) {
-        console.error('[auth] Error loading user profile:', error);
-        console.log('[auth] Continuing authentication without profile data');
+        logError('[auth] Error loading user profile:', error);
+        log('[auth] Continuing authentication without profile data');
       } else if (data) {
-        console.log('[auth] Setting user profile:', data);
+        log('[auth] Setting user profile:', data);
         setUser(data);
       } else {
         // No profile exists, create one automatically
-        console.log('[auth] No user profile found, creating one...');
+        log('[auth] No user profile found, creating one...');
         try {
           const { data: authUser } = await supabase.auth.getUser();
           if (authUser.user) {
@@ -178,45 +179,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .single();
             
             if (createError) {
-              console.error('[auth] Error creating user profile:', createError);
+              logError('[auth] Error creating user profile:', createError);
             } else if (createdProfile) {
-              console.log('[auth] Created and set new user profile:', createdProfile);
+              log('[auth] Created and set new user profile:', createdProfile);
               setUser(createdProfile);
             }
           }
         } catch (createErr) {
-          console.error('[auth] Exception creating user profile:', createErr);
+          logError('[auth] Exception creating user profile:', createErr);
         }
       }
     } catch (err: unknown) {
-      console.error('[auth] Error loading user profile:', err);
-      console.log('[auth] No user profile found, continuing without profile data');
+      logError('[auth] Error loading user profile:', err);
+      log('[auth] No user profile found, continuing without profile data');
     } finally {
       if (import.meta.env.DEV) {
-        console.log('[auth] loadUserProfile complete');
+        log('[auth] loadUserProfile complete');
       }
       setIsLoading(false);
     }
   };
 
   const login = async (email: string, password: string) => {
-    console.log('[auth] Login attempt for:', email);
+    log('[auth] Login attempt for:', email);
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log('[auth] Attempting Supabase signIn...');
+      log('[auth] Attempting Supabase signIn...');
       const { error } = await signIn(email, password);
-      console.log('[auth] signIn response:', { error });
+      log('[auth] signIn response:', { error });
       
       if (error) {
-        console.error('[auth] Supabase login error:', error);
+        logError('[auth] Supabase login error:', error);
         throw new Error(error.message);
       }
-      console.log('[auth] Supabase login successful, waiting for auth state change...');
+      log('[auth] Supabase login successful, waiting for auth state change...');
       // User profile will be loaded via the auth state change listener
     } catch (err) {
-      console.error('[auth] Login failed:', err);
+      logError('[auth] Login failed:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
       setIsLoading(false);
     }
@@ -253,13 +254,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    console.log('Logging out...');
+    log('Logging out...');
     setError(null);
     
     // Sign out from Supabase
     const { error } = await signOut();
     if (error) {
-      console.error('Logout error:', error);
+      logError('Logout error:', error);
       setError(error.message);
     }
     

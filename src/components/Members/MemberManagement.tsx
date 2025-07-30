@@ -8,6 +8,7 @@ import {
   updateMember as updateMemberApi,
   deleteMember as deleteMemberApi
 } from '../../lib/supabase';
+import { log } from '../../lib/logger';
 
 interface Member {
   id: string;
@@ -110,6 +111,7 @@ export const MemberManagement: React.FC = () => {
   };
 
   const deleteMember = async (memberId: string) => {
+    log('[memberManagemnet] deleteMember called for ID:', memberId);
     if (confirm('Are you sure you want to delete this member? This action cannot be undone.')) {
       if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
         await deleteMemberApi(memberId);
@@ -121,6 +123,7 @@ export const MemberManagement: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    log('[memberManagement] handleSubmit called with formData:', formData);
     e.preventDefault();
     
     try {

@@ -3,6 +3,7 @@ import { Users, Search, Filter, CheckCircle, Clock, Plus, Mail } from 'lucide-re
 import { useGymnasts } from '../../hooks/useSupabaseData';
 import { updateGymnast, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { log, error as logError } from '../../lib/logger';
 
 export const GymnastManagement: React.FC = () => {
   const { user } = useAuth();
@@ -54,10 +55,10 @@ export const GymnastManagement: React.FC = () => {
         });
         await refetch();
       } else {
-        console.log('Gymnast approved in demo mode');
+        log('Gymnast approved in demo mode');
       }
     } catch (err) {
-      console.error('Failed to approve gymnast:', err);
+      logError('Failed to approve gymnast:', err);
     }
   };
 
