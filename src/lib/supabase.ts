@@ -121,19 +121,23 @@ export const getUserProfile = async (userId: string) => {
     devLog('[supabase] getUserProfile try begin');
 
     // Create a timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Profile query timeout')), 30000);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Profile query timeout')), 60000);
     });
 
     // Create the actual query promise
     const queryPromise = supabase
       .from('user_profiles')
-      .select('*')
+      .select(`
+        *,
+        gym:gyms(*)
+      `)
       .eq('id', userId)
       .maybeSingle();
 
     // Race between timeout and query
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    const result = await Promise.race([queryPromise, timeoutPromise]);
+    const { data, error } = result;
     
     devLog('[supabase] getUserProfile after await supabase');
 
