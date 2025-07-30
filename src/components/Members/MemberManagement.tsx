@@ -162,8 +162,8 @@ export const MemberManagement: React.FC = () => {
         setEditingMember(null);
       } else {
         // Create new member
-        const newMemberProfile: MemberProfile = {
-          id: `member-${Date.now()}`,
+        const newMemberProfile = {
+          id: crypto.randomUUID(),
           first_name: formData.firstName,
           last_name: formData.lastName,
           email: formData.email,
@@ -172,8 +172,6 @@ export const MemberManagement: React.FC = () => {
           phone: formData.phone || null,
           date_of_birth: formData.dateOfBirth || null,
           is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
         };
 
         if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
