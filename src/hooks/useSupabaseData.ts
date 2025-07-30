@@ -249,6 +249,119 @@ export const useGyms = () => {
   return { gyms, loading, error, refetch: fetchGyms, addGym, updateGym, removeGym };
 };
 
+export type MemberProfile = Database['public']['Tables']['user_profiles']['Row'] & {
+  gym?: Database['public']['Tables']['gyms']['Row'] | null;
+};
+
+export const useMembers = () => {
+  const { user } = useAuth();
+  const [members, setMembers] = useState<MemberProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        const stored = localStorage.getItem('demoMembers');
+        if (stored) {
+          setMembers(JSON.parse(stored));
+          return;
+        }
+
+        const mockMembers: MemberProfile[] = [
+          {
+            id: 'member-1',
+            first_name: 'League',
+            last_name: 'Administrator',
+            email: 'admin@demo.com',
+            role: 'admin',
+            phone: '(555) 123-4567',
+            is_active: true,
+            gym_id: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            gym: null
+          },
+          {
+            id: 'member-2',
+            first_name: 'Sarah',
+            last_name: 'Johnson',
+            email: 'coach@demo.com',
+            role: 'coach',
+            phone: '(555) 234-5678',
+            is_active: true,
+            gym_id: 'gym-1',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            gym: { id: 'gym-1', name: 'Elite Gymnastics Center', address: '', city: '', state: '', zip_code: '', contact_email: '', contact_phone: null, website: null, is_approved: true, admin_id: null, created_at: '', updated_at: '' }
+          }
+        ];
+
+        setMembers(mockMembers);
+        localStorage.setItem('demoMembers', JSON.stringify(mockMembers));
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select(`*, gym:gyms(*)`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMembers(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch members');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  const addMemberLocal = (member: MemberProfile) => {
+    setMembers(prev => {
+      const updated = [...prev, member];
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoMembers', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const updateMemberLocal = (member: MemberProfile) => {
+    setMembers(prev => {
+      const updated = prev.map(m => (m.id === member.id ? member : m));
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoMembers', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const removeMemberLocal = (id: string) => {
+    setMembers(prev => {
+      const updated = prev.filter(m => m.id !== id);
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoMembers', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  return {
+    members,
+    loading,
+    error,
+    refetch: fetchMembers,
+    addMember: addMemberLocal,
+    updateMember: updateMemberLocal,
+    removeMember: removeMemberLocal
+  };
+};
+
 type GymnastWithUser = Database['public']['Tables']['gymnasts']['Row'] & {
   user: Database['public']['Tables']['user_profiles']['Row'];
 };
