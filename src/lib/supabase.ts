@@ -388,6 +388,17 @@ export const updateEvent = async (
   return { data, error };
 };
 
+export const deleteEvent = async (id: string) => {
+  devLog('[supabase] deleteEvent id:', id);
+  const { error } = await supabase.from('events').delete().eq('id', id);
+  if (error) {
+    devError('[supabase] deleteEvent error:', error);
+  } else {
+    devLog('[supabase] deleteEvent success');
+  }
+  return { error };
+};
+
 export const createGym = async (
   gym: Database['public']['Tables']['gyms']['Insert']
 ) => {
