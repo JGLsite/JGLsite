@@ -249,7 +249,7 @@ export const useGymnasts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchGymnasts = useCallback(async () => {
     if (!user?.gym_id && !user?.id?.startsWith('demo-')) return;
 
     // For demo users, return mock gymnasts
@@ -300,30 +300,31 @@ export const useGymnasts = () => {
       return;
     }
 
-    const fetchGymnasts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('gymnasts')
-          .select(`
-            *,
-            user:user_profiles(*)
-          `)
-          .eq('gym_id', user.gym_id)
-          .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('gymnasts')
+        .select(`
+          *,
+          user:user_profiles(*)
+        `)
+        .eq('gym_id', user.gym_id)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        setGymnasts(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch gymnasts');
-      } finally {
-        setLoading(false);
-      }
-    };
+      if (error) throw error;
+      setGymnasts(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch gymnasts');
+    } finally {
+      setLoading(false);
+    }
 
-    fetchGymnasts();
   }, [user?.gym_id, user?.id]);
 
-  return { gymnasts, loading, error };
+  useEffect(() => {
+    fetchGymnasts();
+  }, [fetchGymnasts]);
+
+  return { gymnasts, loading, error, refetch: fetchGymnasts };
 };
 
 export const useChallenges = () => {
