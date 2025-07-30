@@ -304,6 +304,22 @@ export const getGymnastsByGym = async (gymId: string) => {
   return { data, error };
 };
 
+export const getGyms = async () => {
+  devLog('[supabase] getGyms');
+  const { data, error } = await supabase
+    .from('gyms')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    devError('[supabase] getGyms error:', error);
+  } else {
+    devLog('[supabase] getGyms result count:', data?.length);
+  }
+
+  return { data, error };
+};
+
 export const getNotifications = async (userId: string) => {
   devLog('[supabase] getNotifications userId:', userId);
   const { data, error } = await supabase
@@ -368,6 +384,69 @@ export const updateEvent = async (
     devError('[supabase] updateEvent error:', error);
   } else {
     devLog('[supabase] updateEvent updated id:', data?.id);
+  }
+  return { data, error };
+};
+
+export const createGym = async (
+  gym: Database['public']['Tables']['gyms']['Insert']
+) => {
+  devLog('[supabase] createGym', gym);
+  const { data, error } = await supabase
+    .from('gyms')
+    .insert(gym)
+    .single();
+  if (error) {
+    devError('[supabase] createGym error:', error);
+  } else {
+    devLog('[supabase] createGym id:', data?.id);
+  }
+  return { data, error };
+};
+
+export const updateGym = async (
+  id: string,
+  updates: Database['public']['Tables']['gyms']['Update']
+) => {
+  devLog('[supabase] updateGym id:', id, 'updates:', updates);
+  const { data, error } = await supabase
+    .from('gyms')
+    .update(updates)
+    .eq('id', id)
+    .single();
+  if (error) {
+    devError('[supabase] updateGym error:', error);
+  } else {
+    devLog('[supabase] updateGym updated id:', data?.id);
+  }
+  return { data, error };
+};
+
+export const deleteGym = async (id: string) => {
+  devLog('[supabase] deleteGym id:', id);
+  const { error } = await supabase.from('gyms').delete().eq('id', id);
+  if (error) {
+    devError('[supabase] deleteGym error:', error);
+  } else {
+    devLog('[supabase] deleteGym success');
+  }
+  return { error };
+};
+
+export const updateGymnast = async (
+  id: string,
+  updates: Database['public']['Tables']['gymnasts']['Update']
+) => {
+  devLog('[supabase] updateGymnast id:', id, 'updates:', updates);
+  const { data, error } = await supabase
+    .from('gymnasts')
+    .update(updates)
+    .eq('id', id)
+    .single();
+  if (error) {
+    devError('[supabase] updateGymnast error:', error);
+  } else {
+    devLog('[supabase] updateGymnast updated id:', data?.id);
   }
   return { data, error };
 };

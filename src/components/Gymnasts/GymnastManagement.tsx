@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Users, Search, Filter, CheckCircle, Clock, Plus, Mail } from 'lucide-react';
-import { useGymnastContext } from '../../contexts/GymnastContext';
+import { useGymnasts } from '../../hooks/useSupabaseData';
+import { updateGymnast, isSupabaseConfigured } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const GymnastManagement: React.FC = () => {
   const { user } = useAuth();
-  const { gymnasts, updateGymnast, loading } = useGymnastContext();
+  const { gymnasts, loading, error, refetch } = useGymnasts();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -13,6 +14,14 @@ export const GymnastManagement: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        Error loading gymnasts: {error}
       </div>
     );
   }
@@ -36,13 +45,17 @@ export const GymnastManagement: React.FC = () => {
 
   const approveGymnast = async (gymnastId: string) => {
     try {
-      updateGymnast(gymnastId, {
-        approved_by_coach: true,
-        approved_by_coach_at: new Date().toISOString(),
-        approved_by_coach_id: user?.id,
-        membership_status: 'active'
-      });
-      console.log('Gymnast approved in My Gymnasts tab');
+      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+        await updateGymnast(gymnastId, {
+          approved_by_coach: true,
+          approved_by_coach_at: new Date().toISOString(),
+          approved_by_coach_id: user?.id || null,
+          membership_status: 'active',
+        });
+        await refetch();
+      } else {
+        console.log('Gymnast approved in demo mode');
+      }
     } catch (err) {
       console.error('Failed to approve gymnast:', err);
     }

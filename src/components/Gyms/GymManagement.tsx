@@ -1,88 +1,13 @@
 import React, { useState } from 'react';
 import { Building2, MapPin, Phone, Mail, Globe, CheckCircle, Clock, Plus, Edit, Trash2, Users } from 'lucide-react';
-
-interface Gym {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  contactEmail: string;
-  contactPhone?: string;
-  website?: string;
-  isApproved: boolean;
-  adminId?: string;
-  createdAt: string;
-  memberCount: number;
-  activeEvents: number;
-}
+import { useGyms, Gym } from '../../hooks/useSupabaseData';
+import { useAuth } from '../../contexts/AuthContext';
+import { isSupabaseConfigured, createGym as createGymApi, updateGym as updateGymApi, deleteGym as deleteGymApi } from '../../lib/supabase';
+import type { Database } from '../../types/database';
 
 export const GymManagement: React.FC = () => {
-  const [gyms, setGyms] = useState<Gym[]>([
-    {
-      id: 'gym-1',
-      name: 'Elite Gymnastics Center',
-      address: '123 Main Street',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10001',
-      contactEmail: 'info@elitegymnastics.com',
-      contactPhone: '(555) 123-4567',
-      website: 'www.elitegymnastics.com',
-      isApproved: true,
-      adminId: 'admin-1',
-      createdAt: '2024-01-15',
-      memberCount: 45,
-      activeEvents: 3
-    },
-    {
-      id: 'gym-2',
-      name: 'Metro Sports Complex',
-      address: '456 Oak Avenue',
-      city: 'Chicago',
-      state: 'IL',
-      zipCode: '60601',
-      contactEmail: 'contact@metrosports.com',
-      contactPhone: '(555) 987-6543',
-      website: 'www.metrosports.com',
-      isApproved: true,
-      adminId: 'admin-2',
-      createdAt: '2024-02-01',
-      memberCount: 38,
-      activeEvents: 2
-    },
-    {
-      id: 'gym-3',
-      name: 'Sunshine Gymnastics Academy',
-      address: '789 Pine Road',
-      city: 'Miami',
-      state: 'FL',
-      zipCode: '33101',
-      contactEmail: 'hello@sunshinegym.com',
-      contactPhone: '(555) 456-7890',
-      isApproved: false,
-      createdAt: '2024-03-10',
-      memberCount: 0,
-      activeEvents: 0
-    },
-    {
-      id: 'gym-4',
-      name: 'Pacific Coast Gymnastics',
-      address: '321 Beach Boulevard',
-      city: 'Los Angeles',
-      state: 'CA',
-      zipCode: '90210',
-      contactEmail: 'info@pacificcoast.com',
-      contactPhone: '(555) 321-0987',
-      website: 'www.pacificcoast.com',
-      isApproved: true,
-      adminId: 'admin-4',
-      createdAt: '2024-01-20',
-      memberCount: 52,
-      activeEvents: 4
-    }
-  ]);
+  const { user } = useAuth();
+  const { gyms, loading, error, refetch, addGym, updateGym: updateGymLocal, removeGym } = useGyms();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingGym, setEditingGym] = useState<Gym | null>(null);
@@ -100,56 +25,113 @@ export const GymManagement: React.FC = () => {
     website: ''
   });
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        Error loading gyms: {error}
+      </div>
+    );
+  }
+
   const filteredGyms = gyms.filter(gym => {
     const matchesSearch = gym.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          gym.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         gym.contactEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || 
-                         (filterStatus === 'approved' && gym.isApproved) ||
-                         (filterStatus === 'pending' && !gym.isApproved);
+                         gym.contact_email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' ||
+                         (filterStatus === 'approved' && gym.is_approved) ||
+                         (filterStatus === 'pending' && !gym.is_approved);
     return matchesSearch && matchesFilter;
   });
 
-  const approveGym = (gymId: string) => {
-    setGyms(prev => prev.map(gym => 
-      gym.id === gymId ? { ...gym, isApproved: true } : gym
-    ));
+  const approveGym = async (gymId: string) => {
+    if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+      await updateGymApi(gymId, { is_approved: true });
+      await refetch();
+    } else {
+      const g = gyms.find((gm) => gm.id === gymId);
+      if (g) {
+        updateGymLocal({ ...g, is_approved: true });
+      }
+    }
   };
 
-  const rejectGym = (gymId: string) => {
+  const rejectGym = async (gymId: string) => {
     if (confirm('Are you sure you want to reject this gym application?')) {
-      setGyms(prev => prev.filter(gym => gym.id !== gymId));
+      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+        await deleteGymApi(gymId);
+        await refetch();
+      } else {
+        removeGym(gymId);
+      }
     }
   };
 
-  const deleteGym = (gymId: string) => {
+  const handleDeleteGym = async (gymId: string) => {
     if (confirm('Are you sure you want to delete this gym? This action cannot be undone.')) {
-      setGyms(prev => prev.filter(gym => gym.id !== gymId));
+      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+        await deleteGymApi(gymId);
+        await refetch();
+      } else {
+        removeGym(gymId);
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (editingGym) {
-      // Update existing gym
-      setGyms(prev => prev.map(gym => 
-        gym.id === editingGym.id 
-          ? { ...gym, ...formData }
-          : gym
-      ));
+      const updates = {
+        name: formData.name,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zipCode,
+        contact_email: formData.contactEmail,
+        contact_phone: formData.contactPhone || null,
+        website: formData.website || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+        await updateGymApi(editingGym.id, updates);
+        await refetch();
+      } else {
+        updateGymLocal({ ...editingGym, ...updates } as Gym);
+      }
       setEditingGym(null);
     } else {
       // Create new gym
-      const newGym: Gym = {
-        id: `gym-${Date.now()}`,
-        ...formData,
-        isApproved: false,
-        createdAt: new Date().toISOString().split('T')[0],
-        memberCount: 0,
-        activeEvents: 0
+      const newGym: Database['public']['Tables']['gyms']['Insert'] = {
+        name: formData.name,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zipCode,
+        contact_email: formData.contactEmail,
+        contact_phone: formData.contactPhone || null,
+        website: formData.website || null,
+        is_approved: false,
+        admin_id: user?.id || null,
       };
-      setGyms(prev => [...prev, newGym]);
+      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+        await createGymApi(newGym);
+        await refetch();
+      } else {
+        addGym({
+          ...(newGym as Gym),
+          id: `demo-${Date.now()}`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as Gym);
+      }
     }
     
     setFormData({
@@ -172,9 +154,9 @@ export const GymManagement: React.FC = () => {
       address: gym.address,
       city: gym.city,
       state: gym.state,
-      zipCode: gym.zipCode,
-      contactEmail: gym.contactEmail,
-      contactPhone: gym.contactPhone || '',
+      zipCode: gym.zip_code,
+      contactEmail: gym.contact_email,
+      contactPhone: gym.contact_phone || '',
       website: gym.website || ''
     });
     setShowCreateForm(true);
@@ -197,9 +179,9 @@ export const GymManagement: React.FC = () => {
 
   const stats = {
     total: gyms.length,
-    approved: gyms.filter(g => g.isApproved).length,
-    pending: gyms.filter(g => !g.isApproved).length,
-    totalMembers: gyms.reduce((sum, g) => sum + g.memberCount, 0)
+    approved: gyms.filter(g => g.is_approved).length,
+    pending: gyms.filter(g => !g.is_approved).length,
+    totalMembers: gyms.length
   };
 
   return (
@@ -293,7 +275,7 @@ export const GymManagement: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-900">{gym.name}</h3>
                 <div className="flex items-center space-x-2">
-                  {gym.isApproved ? (
+                  {gym.is_approved ? (
                     <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full flex items-center space-x-1">
                       <CheckCircle className="w-4 h-4" />
                       <span>Approved</span>
@@ -310,16 +292,16 @@ export const GymManagement: React.FC = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex items-center space-x-2 text-gray-600">
                   <MapPin className="w-4 h-4" />
-                  <span>{gym.address}, {gym.city}, {gym.state} {gym.zipCode}</span>
+                  <span>{gym.address}, {gym.city}, {gym.state} {gym.zip_code}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-gray-600">
                   <Mail className="w-4 h-4" />
-                  <span>{gym.contactEmail}</span>
+                  <span>{gym.contact_email}</span>
                 </div>
-                {gym.contactPhone && (
+                {gym.contact_phone && (
                   <div className="flex items-center space-x-2 text-gray-600">
                     <Phone className="w-4 h-4" />
-                    <span>{gym.contactPhone}</span>
+                    <span>{gym.contact_phone}</span>
                   </div>
                 )}
                 {gym.website && (
@@ -330,14 +312,14 @@ export const GymManagement: React.FC = () => {
                 )}
               </div>
 
-              {gym.isApproved && (
+              {gym.is_approved && (
                 <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{gym.memberCount}</div>
+                    <div className="text-2xl font-bold text-blue-600">0</div>
                     <div className="text-sm text-gray-600">Members</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{gym.activeEvents}</div>
+                    <div className="text-2xl font-bold text-purple-600">0</div>
                     <div className="text-sm text-gray-600">Active Events</div>
                   </div>
                 </div>
@@ -345,10 +327,10 @@ export const GymManagement: React.FC = () => {
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                 <div className="text-sm text-gray-500">
-                  Added: {new Date(gym.createdAt).toLocaleDateString()}
+                  Added: {new Date(gym.created_at).toLocaleDateString()}
                 </div>
                 <div className="flex space-x-2">
-                  {!gym.isApproved && (
+                  {!gym.is_approved && (
                     <>
                       <button
                         onClick={() => approveGym(gym.id)}
@@ -371,7 +353,7 @@ export const GymManagement: React.FC = () => {
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => deleteGym(gym.id)}
+                    onClick={() => handleDeleteGym(gym.id)}
                     className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
