@@ -117,23 +117,36 @@ export const getCurrentUser = async () => {
 // Database helpers
 export const getUserProfile = async (userId: string) => {
   devLog('[supabase] getUserProfile for', userId);
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select(`
-      *,
-      gym:gyms(*)
-    `)
-    .eq('id', userId)
-    .single();
+  
+  try {
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Profile query timeout')), 5000);
+    });
+    
+    const queryPromise = supabase
+      .from('user_profiles')
+      .select(`
+        *,
+        gym:gyms(*)
+      `)
+      .eq('id', userId)
+      .single();
+    
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    
+    if (error) {
+      devError('[supabase] getUserProfile error:', error);
+      devError('[supabase] getUserProfile error details:', error.message, error.code);
+    } else {
+      devLog('[supabase] getUserProfile result:', data);
+    }
 
-  if (error) {
-    devError('[supabase] getUserProfile error:', error);
-    devError('[supabase] getUserProfile error details:', error.message, error.code);
-  } else {
-    devLog('[supabase] getUserProfile result:', data);
+    return { data, error };
+  } catch (err) {
+    devError('[supabase] getUserProfile timeout or error:', err);
+    return { data: null, error: err };
   }
-
-  return { data, error };
 };
 
 export const getGymnastProfile = async (userId: string) => {
