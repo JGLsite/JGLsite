@@ -18,6 +18,13 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onShowLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError('');
+    
+    // Client-side password validation
+    if (password.length < 6) {
+      setLocalError('Password should be at least 6 characters.');
+      return;
+    }
+    
     try {
       await signUp(email, password, firstName, lastName);
     } catch (err) {
@@ -114,6 +121,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onShowLogin }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-12 pr-12 block w-full border border-gray-300 rounded-xl px-4 py-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                   placeholder="Enter your password"
+                  minLength={6}
                 />
                 <button
                   type="button"
