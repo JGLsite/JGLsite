@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, MapPin, Phone, Mail, Globe, CheckCircle, Clock, Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Building2, MapPin, Phone, Mail, Globe, CheckCircle, Clock, Plus, Edit, Trash2, Users, Eye } from 'lucide-react';
 import { useGyms, Gym } from '../../hooks/useSupabaseData';
 import { useAuth } from '../../contexts/AuthContext';
 import { isSupabaseConfigured, createGym as createGymApi, updateGym as updateGymApi, deleteGym as deleteGymApi } from '../../lib/supabase';
@@ -82,6 +82,16 @@ export const GymManagement: React.FC = () => {
       } else {
         removeGym(gymId);
       }
+    }
+  };
+
+  const toggleVisibility = async (gym: Gym) => {
+    const newStatus = !gym.is_approved;
+    if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+      await updateGymApi(gym.id, { is_approved: newStatus });
+      await refetch();
+    } else {
+      updateGymLocal({ ...gym, is_approved: newStatus });
     }
   };
 
@@ -346,6 +356,12 @@ export const GymManagement: React.FC = () => {
                       </button>
                     </>
                   )}
+                  <button
+                    onClick={() => toggleVisibility(gym)}
+                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => startEdit(gym)}
                     className="p-2 text-gray-400 hover:text-blue-600 transition-colors"

@@ -129,7 +129,17 @@ export const useEvents = () => {
     });
   };
 
-  return { events, loading, error, refetch: fetchEvents, addEvent, updateEvent };
+  const removeEvent = (id: string) => {
+    setEvents((prev) => {
+      const updated = prev.filter((e) => e.id !== id);
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoEvents', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  return { events, loading, error, refetch: fetchEvents, addEvent, updateEvent, removeEvent };
 };
 
 export type Gym = Database['public']['Tables']['gyms']['Row'];

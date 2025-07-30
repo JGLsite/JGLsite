@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Users, DollarSign, Plus, Edit, Eye, Trash2 } from 'lucide-react';
 import { useEvents, EventWithRelations } from '../../hooks/useSupabaseData';
-import { isSupabaseConfigured, createEvent, updateEvent as updateEventApi } from '../../lib/supabase';
+import {
+  isSupabaseConfigured,
+  createEvent,
+  updateEvent as updateEventApi,
+  deleteEvent as deleteEventApi,
+} from '../../lib/supabase';
 import type { Database } from '../../types/database';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -15,7 +20,7 @@ export const EventManagement: React.FC<EventManagementProps> = ({
   onCreateFormClose,
 }) => {
   const { user } = useAuth();
-  const { events, loading, error, refetch, addEvent, updateEvent } = useEvents();
+  const { events, loading, error, refetch, addEvent, updateEvent, removeEvent } = useEvents();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithRelations | null>(null);
   const [formData, setFormData] = useState({
@@ -167,6 +172,35 @@ export const EventManagement: React.FC<EventManagementProps> = ({
     setShowCreateForm(true);
   };
 
+  const toggleVisibility = async (event: EventWithRelations) => {
+    const newStatus = event.status === 'draft' ? 'open' : 'draft';
+    if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+      const { error } = await updateEventApi(event.id, { status: newStatus });
+      if (error) {
+        alert('Failed to update event: ' + error.message);
+        return;
+      }
+      await refetch();
+    } else {
+      updateEvent({ ...event, status: newStatus });
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+        const { error } = await deleteEventApi(eventId);
+        if (error) {
+          alert('Failed to delete event: ' + error.message);
+          return;
+        }
+        await refetch();
+      } else {
+        removeEvent(eventId);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -220,7 +254,10 @@ export const EventManagement: React.FC<EventManagementProps> = ({
                   Registration deadline: {new Date(event.registration_deadline).toLocaleDateString()}
                 </div>
                 <div className="flex space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                  <button
+                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                    onClick={() => toggleVisibility(event)}
+                  >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
@@ -229,7 +266,10 @@ export const EventManagement: React.FC<EventManagementProps> = ({
                   >
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
+                  <button
+                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                    onClick={() => handleDeleteEvent(event.id)}
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
