@@ -193,11 +193,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (data) {
         console.log('[auth] Setting user profile:', data);
         setUser(data);
-      } else if (data) {
       }
+    } catch (err: any) {
       console.error('[auth] Error loading user profile:', err);
-        setUser(data);
-        console.log('[auth] No user profile found, continuing without profile data');
+      console.log('[auth] No user profile found, continuing without profile data');
+    } finally {
       if (import.meta.env.DEV) {
         console.log('[auth] loadUserProfile complete');
       }
