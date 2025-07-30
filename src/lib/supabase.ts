@@ -55,16 +55,36 @@ export const signUp = async (
   userData: Database['public']['Tables']['user_profiles']['Insert']
 ) => {
   devLog('[supabase] signUp', email);
-  const { data, error } = await supabase.auth.signUp({
+  
+  // First create the auth user
+  const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      data: userData,
-      emailRedirectTo: undefined,
-      emailConfirmation: false
-    },
   });
-  return { data, error };
+  
+  if (authError) {
+    devError('[supabase] signUp auth error:', authError);
+    return { data: null, error: authError };
+  }
+  
+  if (!authData.user) {
+    return { data: null, error: new Error('No user returned from signup') };
+  }
+  
+  // Then create the user profile
+  const { error: profileError } = await supabase
+    .from('user_profiles')
+    .insert({
+      ...userData,
+      id: authData.user.id,
+    });
+  
+  if (profileError) {
+    devError('[supabase] signUp profile error:', profileError);
+    return { data: authData, error: profileError };
+  }
+  
+  return { data: authData, error: null };
 };
 
 export const signIn = async (email: string, password: string) => {

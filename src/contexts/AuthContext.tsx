@@ -97,21 +97,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[auth] AuthProvider initializing');
     }
 
-    // Check for demo mode first
-    const demoUser = localStorage.getItem('demoUser');
-    if (demoUser) {
-      try {
-        const parsedUser = JSON.parse(demoUser);
-        console.log('Found demo user in localStorage:', parsedUser);
-        setUser(parsedUser);
-        setIsLoading(false);
-        return;
-      } catch (err) {
-        console.log('Error parsing demo user, removing:', err);
-        localStorage.removeItem('demoUser');
-      }
-    }
-
     // Get initial session
     if (import.meta.env.DEV) {
       console.log('[auth] Checking existing session');
@@ -181,40 +166,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
 
-    // Demo credentials
-    if (password === 'demo123' && demoUsers[email]) {
-      console.log('Using demo mode for:', email);
-      const demoUser = demoUsers[email];
-      setUser(demoUser);
-      localStorage.setItem('demoUser', JSON.stringify(demoUser));
-      setIsLoading(false);
-      return;
-    }
-
-    if (!isSupabaseConfigured) {
-      setError('Supabase credentials are not configured.');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       console.log('Attempting Supabase login...');
       const { error } = await signIn(email, password);
       if (error) {
         console.error('Supabase login error:', error);
-
-        if (error.message.includes('Email not confirmed') && password === 'demo123') {
-          console.log('Email not confirmed, checking for demo fallback...');
-          const demoUser = demoUsers[email];
-          if (demoUser) {
-            console.log('Using demo fallback for:', email);
-            setUser(demoUser);
-            localStorage.setItem('demoUser', JSON.stringify(demoUser));
-            setIsLoading(false);
-            return;
-          }
-        }
-
         throw new Error(error.message);
       }
       console.log('Supabase login successful');
@@ -235,28 +191,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     setError(null);
 
-    if (!isSupabaseConfigured) {
-      const demoUser: UserProfile = {
-        id: `demo-${Date.now()}`,
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        role: 'gymnast',
-        gym_id: null,
-        phone: null,
-        date_of_birth: null,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setUser(demoUser);
-      localStorage.setItem('demoUser', JSON.stringify(demoUser));
-      setIsLoading(false);
-      return;
-    }
 
     try {
       const { error } = await supabaseSignUp(email, password, {
+        id: crypto.randomUUID(),
         email,
         first_name: firstName,
         last_name: lastName,
@@ -267,11 +205,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(error.message);
       }
 
-      // Automatically log the user in after successful signup
-      const { error: loginError } = await signIn(email, password);
-      if (loginError) {
-        throw new Error(loginError.message);
-      }
+      // User profile will be loaded via the auth state change listener
+      setIsLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed');
       setIsLoading(false);
@@ -281,9 +216,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     console.log('Logging out...');
     setError(null);
-    
-    // Clear demo user
-    localStorage.removeItem('demoUser');
     
     // Sign out from Supabase
     const { error } = await signOut();
