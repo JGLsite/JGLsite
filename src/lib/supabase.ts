@@ -119,34 +119,27 @@ export const getUserProfile = async (userId: string) => {
   devLog('[supabase] getUserProfile for', userId);
   
   try {
-    // First try to get the profile without .single() to see what we get
     const { data, error } = await supabase
       .from('user_profiles')
       .select(`
         *,
         gym:gyms(*)
       `)
-      .eq('id', userId);
+      .eq('id', userId)
+      .maybeSingle();
     
     if (error) {
       devError('[supabase] getUserProfile error:', error);
       return { data: null, error };
     }
     
-    // Check if we got exactly one row
-    if (!data || data.length === 0) {
+    if (!data) {
       devLog('[supabase] No user profile found for user:', userId);
-      return { data: null, error: { message: 'No user profile found', code: 'NO_PROFILE' } };
+      return { data: null, error: null };
     }
     
-    if (data.length > 1) {
-      devError('[supabase] Multiple profiles found for user:', userId, 'count:', data.length);
-      return { data: null, error: { message: 'Multiple profiles found', code: 'MULTIPLE_PROFILES' } };
-    }
-    
-    const profile = data[0];
-    devLog('[supabase] getUserProfile result:', profile);
-    return { data: profile, error: null };
+    devLog('[supabase] getUserProfile result:', data);
+    return { data, error: null };
     
   } catch (err) {
     devError('[supabase] getUserProfile exception:', err);
