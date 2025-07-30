@@ -221,43 +221,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (data) {
         console.log('[auth] Setting user profile:', data);
         setUser(data);
-        
-        // If user profile doesn't exist, create one
-          devLog('[auth] User profile not found, creating one...');
-          const { data: authUser } = await supabase.auth.getUser();
-          if (authUser.user) {
-            const newProfile = {
-              id: authUser.user.id,
-              email: authUser.user.email || '',
-              first_name: authUser.user.user_metadata?.first_name || 'User',
-              last_name: authUser.user.user_metadata?.last_name || '',
-              role: 'gymnast' as const,
-            };
-            
-            devLog('[auth] Creating profile:', newProfile);
-            const { error: insertError } = await supabase
-              .from('user_profiles')
-              .insert(newProfile);
-              
-            if (insertError) {
-              devError('[auth] Failed to create user profile:', insertError);
-              setError('Failed to create user profile');
-            } else {
-              devLog('[auth] User profile created successfully');
-              // Retry loading the profile
-              const { data: newData, error: retryError } = await getUserProfile(userId);
-              if (retryError) {
-                devError('[auth] Failed to load profile after creation:', retryError);
-                setError('Failed to load user profile after creation');
-              } else if (newData) {
-                devLog('[auth] Successfully loaded new profile:', newData);
-                setUser(newData);
-              }
-            }
-          }
-        } else {
-          setError('Failed to load user profile');
-        }
       } else {
         console.warn('[auth] No user profile data returned');
         setError('No user profile found');
@@ -304,7 +267,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     setIsLoading(true);
     setError(null);
-
 
     try {
       const { error } = await supabaseSignUp(email, password, {
