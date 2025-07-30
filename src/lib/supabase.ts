@@ -120,35 +120,23 @@ export const getUserProfile = async (userId: string) => {
   try {
     devLog('[supabase] getUserProfile try begin');
 
-    // Create a timeout promise
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Profile query timeout')), 60000);
-    });
-
-    // Create the actual query promise
-    const queryPromise = supabase
+    // Simplified query without gym relation to avoid potential RLS issues
+    const { data, error } = await supabase
       .from('user_profiles')
-      .select(`
-        *,
-        gym:gyms(*)
-      `)
+      .select('*')
       .eq('id', userId)
-      .maybeSingle();
-
-    // Race between timeout and query
-    const result = await Promise.race([queryPromise, timeoutPromise]);
-    const { data, error } = result;
+      .single();
     
     devLog('[supabase] getUserProfile after await supabase');
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned - user profile doesn't exist
+        devLog('[supabase] No user profile found for user:', userId);
+        return { data: null, error: { code: 'NO_PROFILE', message: 'User profile not found' } };
+      }
       devError('[supabase] getUserProfile error:', error);
       return { data: null, error };
-    }
-    
-    if (!data) {
-      devLog('[supabase] No user profile found for user:', userId);
-      return { data: null, error: null };
     }
     
     devLog('[supabase] getUserProfile result:', data);
