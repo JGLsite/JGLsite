@@ -132,6 +132,113 @@ export const useEvents = () => {
   return { events, loading, error, refetch: fetchEvents, addEvent, updateEvent };
 };
 
+export type Gym = Database['public']['Tables']['gyms']['Row'];
+
+export const useGyms = () => {
+  const { user } = useAuth();
+  const [gyms, setGyms] = useState<Gym[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchGyms = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        const stored = localStorage.getItem('demoGyms');
+        if (stored) {
+          setGyms(JSON.parse(stored));
+          return;
+        }
+
+        const mockGyms = [
+          {
+            id: 'demo-gym-1',
+            name: 'Elite Gymnastics Center',
+            address: '123 Main Street',
+            city: 'New York',
+            state: 'NY',
+            zip_code: '10001',
+            contact_email: 'info@elitegymnastics.com',
+            contact_phone: '(555) 123-4567',
+            website: 'www.elitegymnastics.com',
+            is_approved: true,
+            admin_id: 'demo-admin-id',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'demo-gym-2',
+            name: 'Metro Sports Complex',
+            address: '456 Oak Avenue',
+            city: 'Chicago',
+            state: 'IL',
+            zip_code: '60601',
+            contact_email: 'contact@metrosports.com',
+            contact_phone: '(555) 987-6543',
+            website: 'www.metrosports.com',
+            is_approved: true,
+            admin_id: 'demo-admin-id',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ];
+
+        setGyms(mockGyms);
+        localStorage.setItem('demoGyms', JSON.stringify(mockGyms));
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('gyms')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setGyms(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch gyms');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchGyms();
+  }, [fetchGyms]);
+
+  const addGym = (gym: Gym) => {
+    setGyms((prev) => {
+      const updated = [...prev, gym];
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoGyms', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const updateGym = (updatedGym: Gym) => {
+    setGyms((prev) => {
+      const updated = prev.map((g) => (g.id === updatedGym.id ? updatedGym : g));
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoGyms', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const removeGym = (id: string) => {
+    setGyms((prev) => {
+      const updated = prev.filter((g) => g.id !== id);
+      if (!isSupabaseConfigured || user?.id?.startsWith('demo-')) {
+        localStorage.setItem('demoGyms', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  return { gyms, loading, error, refetch: fetchGyms, addGym, updateGym, removeGym };
+};
+
 type GymnastWithUser = Database['public']['Tables']['gymnasts']['Row'] & {
   user: Database['public']['Tables']['user_profiles']['Row'];
 };
