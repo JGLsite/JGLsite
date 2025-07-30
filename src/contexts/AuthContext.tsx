@@ -227,7 +227,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error('Error loading user profile:', err);
-      setError('Failed to load user profile');
+      // Don't set error for missing profile, just continue without it
+      console.warn('[auth] Continuing without user profile');
+      setUser(null);
     } finally {
       if (import.meta.env.DEV) {
         console.log('[auth] loadUserProfile complete');
