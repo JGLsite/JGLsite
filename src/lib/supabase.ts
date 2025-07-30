@@ -119,6 +119,8 @@ export const getUserProfile = async (userId: string) => {
   devLog('[supabase] getUserProfile for', userId);
   
   try {
+      devLog('[supabase] getUserProfile try begin');
+
     const { data, error } = await supabase
       .from('user_profiles')
       .select(`
@@ -127,7 +129,8 @@ export const getUserProfile = async (userId: string) => {
       `)
       .eq('id', userId)
       .maybeSingle();
-    
+      devLog('[supabase] getUserProfile after await supabase');
+
     if (error) {
       devError('[supabase] getUserProfile error:', error);
       return { data: null, error };
