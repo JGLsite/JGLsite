@@ -153,16 +153,6 @@ export const getUserProfile = async (userId: string) => {
     return { data: null, error: err };
   }
 };
-    } else {
-      devLog('[supabase] getUserProfile result:', data);
-    }
-
-    return { data, error };
-  } catch (err) {
-    devError('[supabase] getUserProfile timeout or error:', err);
-    return { data: null, error: err };
-  }
-};
 
 export const getGymnastProfile = async (userId: string) => {
   devLog('[supabase] getGymnastProfile for', userId);
