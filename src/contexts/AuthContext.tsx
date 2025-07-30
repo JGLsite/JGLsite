@@ -187,6 +187,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.warn('[auth] No user profile found - user may need to complete profile setup');
         } else {
           console.error('Error loading user profile:', error);
+        }
+      }
       
       if (error) {
         console.error('[auth] Error loading user profile:', error);
