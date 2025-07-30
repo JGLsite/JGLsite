@@ -93,6 +93,7 @@ export const signIn = async (email: string, password: string) => {
     email,
     password,
   });
+  devLog('[supabase] signIn result:', { user: data?.user?.id, session: !!data?.session, error });
   if (error) {
     devError('[supabase] signIn error:', error);
   }
@@ -127,6 +128,7 @@ export const getUserProfile = async (userId: string) => {
 
   if (error) {
     devError('[supabase] getUserProfile error:', error);
+    devError('[supabase] getUserProfile error details:', error.message, error.code);
   } else {
     devLog('[supabase] getUserProfile result:', data);
   }

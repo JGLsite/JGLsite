@@ -181,11 +181,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     try {
       const { data, error } = await getUserProfile(userId);
+      console.log('[auth] getUserProfile result:', { data, error });
       if (error) {
         console.error('Error loading user profile:', error);
         setError('Failed to load user profile');
       } else if (data) {
+        console.log('[auth] Setting user profile:', data);
         setUser(data);
+      } else {
+        console.warn('[auth] No user profile data returned');
+        setError('No user profile found');
       }
     } catch (err) {
       console.error('Error loading user profile:', err);
@@ -199,21 +204,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string) => {
-    console.log('Login attempt:', email, password);
+    console.log('[auth] Login attempt for:', email);
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log('Attempting Supabase login...');
+      console.log('[auth] Attempting Supabase signIn...');
       const { error } = await signIn(email, password);
+      console.log('[auth] signIn response:', { error });
+      
       if (error) {
-        console.error('Supabase login error:', error);
+        console.error('[auth] Supabase login error:', error);
         throw new Error(error.message);
       }
-      console.log('Supabase login successful');
+      console.log('[auth] Supabase login successful, waiting for auth state change...');
       // User profile will be loaded via the auth state change listener
     } catch (err) {
-      console.error('Login failed:', err);
+      console.error('[auth] Login failed:', err);
       setError(err instanceof Error ? err.message : 'Login failed');
       setIsLoading(false);
     }
