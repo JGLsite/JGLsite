@@ -187,12 +187,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.warn('[auth] No user profile found - user may need to complete profile setup');
         } else {
           console.error('Error loading user profile:', error);
-        }
+      
+      if (error) {
         console.error('[auth] Error loading user profile:', error);
         console.log('[auth] Continuing authentication without profile data');
       } else if (data) {
         console.log('[auth] Setting user profile:', data);
         setUser(data);
+      } else {
+        // No profile exists, create one automatically
+        console.log('[auth] No user profile found, creating one...');
+        try {
+          const { data: authUser } = await supabase.auth.getUser();
+          if (authUser.user) {
+            const newProfile = {
+              id: authUser.user.id,
+              email: authUser.user.email || '',
+              first_name: authUser.user.user_metadata?.first_name || 'User',
+              last_name: authUser.user.user_metadata?.last_name || '',
+              role: 'gymnast' as const,
+            };
+            
+            const { data: createdProfile, error: createError } = await supabase
+              .from('user_profiles')
+              .insert(newProfile)
+              .select(`
+                *,
+                gym:gyms(*)
+              `)
+              .single();
+            
+            if (createError) {
+              console.error('[auth] Error creating user profile:', createError);
+            } else if (createdProfile) {
+              console.log('[auth] Created and set new user profile:', createdProfile);
+              setUser(createdProfile);
+            }
+          }
+        } catch (createErr) {
+          console.error('[auth] Exception creating user profile:', createErr);
+        }
       }
     } catch (err: any) {
       console.error('[auth] Error loading user profile:', err);
