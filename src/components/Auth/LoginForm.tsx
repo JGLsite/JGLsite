@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trophy, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { log, error as logError } from '../../lib/logger';
 
 interface LoginFormProps {
   onShowSignup: () => void;
@@ -15,13 +16,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onShowSignup }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    console.log('Form submitted with:', email, password);
+    log('Form submitted with:', email, password);
     
     try {
       await login(email, password);
-      console.log('Login successful!');
+      log('Login successful!');
     } catch (err) {
-      console.error('Login error in form:', err);
+      logError('Login error in form:', err);
       setError(err instanceof Error ? err.message : 'Invalid email or password');
     }
   };

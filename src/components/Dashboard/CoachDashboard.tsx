@@ -4,6 +4,7 @@ import { Users, Calendar, CheckCircle, Clock, Trophy, Star } from 'lucide-react'
 import { useNotifications } from '../../hooks/useSupabaseData';
 import { useGymnastContext } from '../../contexts/GymnastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { log } from '../../lib/logger';
 
 export const CoachDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -52,13 +53,14 @@ export const CoachDashboard: React.FC = () => {
   };
 
   const handleSubmitGymnast = () => {
+    log('Submitting new gymnast data:', gymnastData);
     // Validate required fields
     if (!gymnastData.firstName || !gymnastData.lastName || !gymnastData.email || 
         !gymnastData.level || !gymnastData.dateOfBirth || !gymnastData.teamName) {
       alert('Please fill in all required fields: First Name, Last Name, Email, Date of Birth, Level, and Team.');
       return;
     }
-
+    
     const newGymnast = {
       id: `gymnast-${Date.now()}`,
       user_id: `user-${Date.now()}`,
@@ -80,7 +82,7 @@ export const CoachDashboard: React.FC = () => {
         date_of_birth: gymnastData.dateOfBirth
       }
     };
-    
+    log('New gymnast object created:', newGymnast, 'calling addGymnast');
     addGymnast(newGymnast);
     alert(`Gymnast ${gymnastData.firstName} ${gymnastData.lastName} added successfully!`);
     setShowAddGymnastModal(false);
@@ -155,13 +157,13 @@ export const CoachDashboard: React.FC = () => {
       approved_by_coach_id: user?.id,
       membership_status: 'active'
     });
-    console.log('Gymnast approved, updated state');
+    log('Gymnast approved, updated state');
   };
 
   const rejectGymnast = (gymnastId: string) => {
     if (confirm('Are you sure you want to reject this gymnast application?')) {
       removeGymnast(gymnastId);
-      console.log('Gymnast rejected and removed');
+      log('Gymnast rejected and removed');
     }
   };
 
