@@ -201,36 +201,6 @@ export const MemberManagement: React.FC = () => {
     }
   };
 
-  const cancelEdit = () => {
-    setEditingMember(null);
-    setShowCreateForm(false);
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      role: 'gymnast',
-      gymId: '',
-      phone: '',
-      dateOfBirth: '',
-      level: ''
-    });
-  };
-      }
-    }
-    
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      role: 'gymnast',
-      gymId: '',
-      phone: '',
-      dateOfBirth: '',
-      level: ''
-    });
-    setShowCreateForm(false);
-  };
-
   const startEdit = (member: Member) => {
     setEditingMember(member);
     setFormData({
@@ -619,23 +589,23 @@ export const MemberManagement: React.FC = () => {
                   </>
                 )}
               </div>
-            </form>
 
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all duration-200"
-              >
-                {editingMember ? 'Update Member' : 'Create Member'}
-              </button>
-            </div>
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                >
+                  {editingMember ? 'Update Member' : 'Create Member'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
