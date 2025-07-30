@@ -183,8 +183,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await getUserProfile(userId);
       console.log('[auth] getUserProfile result:', { data, error });
       if (error) {
-        console.error('Error loading user profile:', error);
-        console.error('[auth] Profile loading failed, but continuing with authentication');
+        if (error.code === 'NO_PROFILE') {
+          console.warn('[auth] No user profile found - user may need to complete profile setup');
+        } else {
+          console.error('Error loading user profile:', error);
+        }
+        console.log('[auth] Continuing authentication without profile data');
       } else if (data) {
         console.log('[auth] Setting user profile:', data);
         setUser(data);
@@ -193,7 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error('Error loading user profile:', err);
-      console.warn('[auth] Continuing without user profile');
+      console.log('[auth] Continuing authentication without profile data');
     } finally {
       if (import.meta.env.DEV) {
         console.log('[auth] loadUserProfile complete');

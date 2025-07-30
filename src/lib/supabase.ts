@@ -119,25 +119,40 @@ export const getUserProfile = async (userId: string) => {
   devLog('[supabase] getUserProfile for', userId);
   
   try {
-    // Add timeout to prevent hanging
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Profile query timeout')), 5000);
-    });
-    
-    const queryPromise = supabase
+    // First try to get the profile without .single() to see what we get
+    const { data, error } = await supabase
       .from('user_profiles')
       .select(`
         *,
         gym:gyms(*)
       `)
-      .eq('id', userId)
-      .single();
-    
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+      .eq('id', userId);
     
     if (error) {
       devError('[supabase] getUserProfile error:', error);
-      devError('[supabase] getUserProfile error details:', error.message, error.code);
+      return { data: null, error };
+    }
+    
+    // Check if we got exactly one row
+    if (!data || data.length === 0) {
+      devLog('[supabase] No user profile found for user:', userId);
+      return { data: null, error: { message: 'No user profile found', code: 'NO_PROFILE' } };
+    }
+    
+    if (data.length > 1) {
+      devError('[supabase] Multiple profiles found for user:', userId, 'count:', data.length);
+      return { data: null, error: { message: 'Multiple profiles found', code: 'MULTIPLE_PROFILES' } };
+    }
+    
+    const profile = data[0];
+    devLog('[supabase] getUserProfile result:', profile);
+    return { data: profile, error: null };
+    
+  } catch (err) {
+    devError('[supabase] getUserProfile exception:', err);
+    return { data: null, error: err };
+  }
+};
     } else {
       devLog('[supabase] getUserProfile result:', data);
     }
