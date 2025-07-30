@@ -125,64 +125,82 @@ export const MemberManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     log('[memberManagement] handleSubmit called with formData:', formData);
     e.preventDefault();
-
-    if (editingMember) {
-      // Update existing member
-      const updates = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        email: formData.email,
-        role: formData.role,
-        gym_id: formData.gymId || null,
-        phone: formData.phone || null,
-        date_of_birth: formData.dateOfBirth || null,
-        is_active: editingMember.isActive
-      };
-      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
-        await updateMemberApi(editingMember.id, updates);
-        await refetch();
-      } else {
-        log('[memberManagement] supaBase not configured, updating member locally');
-        updateMemberLocal({ ...editingMember, ...formData, isActive: editingMember.isActive });
-      }
-      setEditingMember(null);
-    } else {
-      // Create new member
-      const newMember: Member = {
-        id: `member-${Date.now()}`,
-        ...formData,
-        isActive: true,
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
-        await createMemberApi({
-          id: newMember.id,
-          first_name: newMember.firstName,
-          last_name: newMember.lastName,
-          email: newMember.email,
-          role: newMember.role,
-          gym_id: newMember.gymId || null,
-          phone: newMember.phone || null,
-          date_of_birth: newMember.dateOfBirth || null,
-          is_active: true
-        });
-        await refetch();
-      } else {
-        addMember(newMember as unknown as MemberProfile & Member);
-      }
-    }
     
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      role: 'gymnast',
-      gymId: '',
-      phone: '',
-      dateOfBirth: '',
-      level: ''
-    });
-    setShowCreateForm(false);
+    try {
+      if (editingMember) {
+        // Update existing member
+        const updates = {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          role: formData.role,
+          gym_id: formData.gymId || null,
+          phone: formData.phone || null,
+          date_of_birth: formData.dateOfBirth || null,
+          is_active: editingMember.isActive
+        };
+        if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+          await updateMemberApi(editingMember.id, updates);
+          await refetch();
+        } else {
+          const updatedMember: MemberProfile = {
+            id: editingMember.id,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            role: formData.role,
+            gym_id: formData.gymId || null,
+            phone: formData.phone || null,
+            date_of_birth: formData.dateOfBirth || null,
+            is_active: editingMember.isActive,
+            created_at: editingMember.createdAt,
+            updated_at: new Date().toISOString(),
+            gym: null
+          };
+          updateMemberLocal(updatedMember);
+        }
+        setEditingMember(null);
+      } else {
+        // Create new member
+        const newMemberProfile: MemberProfile = {
+          id: `member-${Date.now()}`,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          role: formData.role,
+          gym_id: formData.gymId || null,
+          phone: formData.phone || null,
+          date_of_birth: formData.dateOfBirth || null,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        if (isSupabaseConfigured && !user?.id?.startsWith('demo-')) {
+          await createMemberApi(newMemberProfile);
+          await refetch();
+        } else {
+          addMember(newMemberProfile);
+        }
+      }
+      
+      // Reset form and close modal
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        role: 'gymnast',
+        gymId: '',
+        phone: '',
+        dateOfBirth: '',
+        level: ''
+      });
+      setShowCreateForm(false);
+      
+    } catch (error) {
+      console.error('Error saving member:', error);
+      alert('Failed to save member. Please try again.');
+    }
   };
 
   const startEdit = (member: Member) => {
@@ -573,22 +591,23 @@ export const MemberManagement: React.FC = () => {
                   </>
                 )}
               </div>
-            </form>
 
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={cancelEdit}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all duration-200"
-              >
-                {editingMember ? 'Update Member' : 'Create Member'}
-              </button>
-            </div>
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                >
+                  {editingMember ? 'Update Member' : 'Create Member'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
