@@ -184,7 +184,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[auth] getUserProfile result:', { data, error });
       if (error) {
         console.error('Error loading user profile:', error);
-        setError('Failed to load user profile');
+        // If user profile doesn't exist, create one
+        if (error.code === 'PGRST116') {
+          console.log('[auth] User profile not found, creating one...');
+          const { data: authUser } = await supabase.auth.getUser();
+          if (authUser.user) {
+            const newProfile = {
+              id: authUser.user.id,
+              email: authUser.user.email || '',
+              first_name: authUser.user.user_metadata?.first_name || 'User',
+              last_name: authUser.user.user_metadata?.last_name || '',
+              role: 'gymnast' as const,
+            };
+            
+            const { error: insertError } = await supabase
+              .from('user_profiles')
+              .insert(newProfile);
+              
+            if (insertError) {
+              console.error('[auth] Failed to create user profile:', insertError);
+              setError('Failed to create user profile');
+            } else {
+              console.log('[auth] User profile created successfully');
+              // Retry loading the profile
+              const { data: newData, error: retryError } = await getUserProfile(userId);
+              if (retryError) {
+                setError('Failed to load user profile after creation');
+              } else if (newData) {
+                setUser(newData);
+              }
+            }
+          }
+        } else {
+          setError('Failed to load user profile');
+        }
       } else if (data) {
         console.log('[auth] Setting user profile:', data);
         setUser(data);
